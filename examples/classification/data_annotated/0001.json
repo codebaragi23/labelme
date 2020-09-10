@@ -5,7 +5,7 @@
     "cat": true,
     "dog": false
   },
-  "shapes": [],
+  "annotations": [],
   "imagePath": "0001.jpg",
   "imageData": null,
   "imageHeight": 480,

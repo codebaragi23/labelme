@@ -3,7 +3,7 @@ from qtpy import QtGui
 from qtpy import QtWidgets
 
 from labelme import QT5
-from labelme.shape import Shape
+from labelme.annotation import Annotation
 import labelme.utils
 
 
@@ -22,9 +22,9 @@ class Canvas(QtWidgets.QWidget):
 
     zoomRequest = QtCore.Signal(int, QtCore.QPoint)
     scrollRequest = QtCore.Signal(int, int)
-    newShape = QtCore.Signal()
+    newAnnotation = QtCore.Signal()
     selectionChanged = QtCore.Signal(list)
-    shapeMoved = QtCore.Signal()
+    annotationMoved = QtCore.Signal()
     drawingPolygon = QtCore.Signal(bool)
     edgeSelected = QtCore.Signal(bool, object)
     vertexSelected = QtCore.Signal(bool)
@@ -48,17 +48,17 @@ class Canvas(QtWidgets.QWidget):
         super(Canvas, self).__init__(*args, **kwargs)
         # Initialise local state.
         self.mode = self.EDIT
-        self.shapes = []
-        self.shapesBackups = []
+        self.annotations = []
+        self.annotationsBackups = []
         self.current = None
-        self.selectedShapes = []  # save the selected shapes here
-        self.selectedShapesCopy = []
+        self.selectedAnnotations = []  # save the selected annotations here
+        self.selectedAnnotationsCopy = []
         # self.line represents:
         #   - createMode == 'polygon': edge from last point to current
         #   - createMode == 'rectangle': diagonal line of the rectangle
         #   - createMode == 'line': the line
         #   - createMode == 'point': the point
-        self.line = Shape()
+        self.line = Annotation()
         self.prevPoint = QtCore.QPoint()
         self.prevMovePoint = QtCore.QPoint()
         self.offsets = QtCore.QPoint(), QtCore.QPoint()
@@ -67,18 +67,18 @@ class Canvas(QtWidgets.QWidget):
         self.visible = {}
         self._hideBackround = False
         self.hideBackround = False
-        self.hShape = None
-        self.prevhShape = None
+        self.hAnnotation = None
+        self.prevhAnnotation = None
         self.hVertex = None
         self.prevhVertex = None
         self.hEdge = None
         self.prevhEdge = None
-        self.movingShape = False
+        self.movingAnnotation = False
         self._painter = QtGui.QPainter()
         self._cursor = CURSOR_DEFAULT
         # Menus:
-        # 0: right-click without selection and dragging of shapes
-        # 1: right-click with selection and dragging of shapes
+        # 0: right-click without selection and dragging of annotations
+        # 1: right-click with selection and dragging of annotations
         self.menus = (QtWidgets.QMenu(), QtWidgets.QMenu())
         # Set widget options.
         self.setMouseTracking(True)
@@ -107,29 +107,29 @@ class Canvas(QtWidgets.QWidget):
             raise ValueError("Unsupported createMode: %s" % value)
         self._createMode = value
 
-    def storeShapes(self):
-        shapesBackup = []
-        for shape in self.shapes:
-            shapesBackup.append(shape.copy())
-        if len(self.shapesBackups) >= 10:
-            self.shapesBackups = self.shapesBackups[-9:]
-        self.shapesBackups.append(shapesBackup)
+    def storeAnnotations(self):
+        annotationsBackup = []
+        for annotation in self.annotations:
+            annotationsBackup.append(annotation.copy())
+        if len(self.annotationsBackups) >= 10:
+            self.annotationsBackups = self.annotationsBackups[-9:]
+        self.annotationsBackups.append(annotationsBackup)
 
     @property
-    def isShapeRestorable(self):
-        if len(self.shapesBackups) < 2:
+    def isAnnotationRestorable(self):
+        if len(self.annotationsBackups) < 2:
             return False
         return True
 
-    def restoreShape(self):
-        if not self.isShapeRestorable:
+    def restoreAnnotation(self):
+        if not self.isAnnotationRestorable:
             return
-        self.shapesBackups.pop()  # latest
-        shapesBackup = self.shapesBackups.pop()
-        self.shapes = shapesBackup
-        self.selectedShapes = []
-        for shape in self.shapes:
-            shape.selected = False
+        self.annotationsBackups.pop()  # latest
+        annotationsBackup = self.annotationsBackups.pop()
+        self.annotations = annotationsBackup
+        self.selectedAnnotations = []
+        for annotation in self.annotations:
+            annotation.selected = False
         self.repaint()
 
     def enterEvent(self, ev):
@@ -142,8 +142,8 @@ class Canvas(QtWidgets.QWidget):
     def focusOutEvent(self, ev):
         self.restoreCursor()
 
-    def isVisible(self, shape):
-        return self.visible.get(shape, True)
+    def isVisible(self, annotation):
+        return self.visible.get(annotation, True)
 
     def drawing(self):
         return self.mode == self.CREATE
@@ -155,16 +155,16 @@ class Canvas(QtWidgets.QWidget):
         self.mode = self.EDIT if value else self.CREATE
         if not value:  # Create
             self.unHighlight()
-            self.deSelectShape()
+            self.deSelectAnnotation()
 
     def unHighlight(self):
-        if self.hShape:
-            self.hShape.highlightClear()
+        if self.hAnnotation:
+            self.hAnnotation.highlightClear()
             self.update()
-        self.prevhShape = self.hShape
+        self.prevhAnnotation = self.hAnnotation
         self.prevhVertex = self.hVertex
         self.prevhEdge = self.hEdge
-        self.hShape = self.hVertex = self.hEdge = None
+        self.hAnnotation = self.hVertex = self.hEdge = None
 
     def selectedVertex(self):
         return self.hVertex is not None
@@ -203,7 +203,7 @@ class Canvas(QtWidgets.QWidget):
                 # colorise to alert the user.
                 pos = self.current[0]
                 self.overrideCursor(CURSOR_POINT)
-                self.current.highlightVertex(0, Shape.NEAR_VERTEX)
+                self.current.highlightVertex(0, Annotation.NEAR_VERTEX)
             if self.createMode in ["polygon", "linestrip"]:
                 self.line[0] = self.current[-1]
                 self.line[1] = pos
@@ -225,13 +225,13 @@ class Canvas(QtWidgets.QWidget):
 
         # Polygon copy moving.
         if QtCore.Qt.RightButton & ev.buttons():
-            if self.selectedShapesCopy and self.prevPoint:
+            if self.selectedAnnotationsCopy and self.prevPoint:
                 self.overrideCursor(CURSOR_MOVE)
-                self.boundedMoveShapes(self.selectedShapesCopy, pos)
+                self.boundedMoveAnnotations(self.selectedAnnotationsCopy, pos)
                 self.repaint()
-            elif self.selectedShapes:
-                self.selectedShapesCopy = [
-                    s.copy() for s in self.selectedShapes
+            elif self.selectedAnnotations:
+                self.selectedAnnotationsCopy = [
+                    s.copy() for s in self.selectedAnnotations
                 ]
                 self.repaint()
             return
@@ -241,45 +241,45 @@ class Canvas(QtWidgets.QWidget):
             if self.selectedVertex():
                 self.boundedMoveVertex(pos)
                 self.repaint()
-                self.movingShape = True
-            elif self.selectedShapes and self.prevPoint:
+                self.movingAnnotation = True
+            elif self.selectedAnnotations and self.prevPoint:
                 self.overrideCursor(CURSOR_MOVE)
-                self.boundedMoveShapes(self.selectedShapes, pos)
+                self.boundedMoveAnnotations(self.selectedAnnotations, pos)
                 self.repaint()
-                self.movingShape = True
+                self.movingAnnotation = True
             return
 
         # Just hovering over the canvas, 2 possibilities:
-        # - Highlight shapes
+        # - Highlight annotations
         # - Highlight vertex
-        # Update shape/vertex fill and tooltip value accordingly.
+        # Update annotation/vertex fill and tooltip value accordingly.
         self.setToolTip(self.tr("Image"))
-        for shape in reversed([s for s in self.shapes if self.isVisible(s)]):
+        for annotation in reversed([s for s in self.annotations if self.isVisible(s)]):
             # Look for a nearby vertex to highlight. If that fails,
-            # check if we happen to be inside a shape.
-            index = shape.nearestVertex(pos, self.epsilon / self.scale)
-            index_edge = shape.nearestEdge(pos, self.epsilon / self.scale)
+            # check if we happen to be inside a annotation.
+            index = annotation.nearestVertex(pos, self.epsilon / self.scale)
+            index_edge = annotation.nearestEdge(pos, self.epsilon / self.scale)
             if index is not None:
                 if self.selectedVertex():
-                    self.hShape.highlightClear()
+                    self.hAnnotation.highlightClear()
                 self.prevhVertex = self.hVertex = index
-                self.prevhShape = self.hShape = shape
+                self.prevhAnnotation = self.hAnnotation = annotation
                 self.prevhEdge = self.hEdge = index_edge
-                shape.highlightVertex(index, shape.MOVE_VERTEX)
+                annotation.highlightVertex(index, annotation.MOVE_VERTEX)
                 self.overrideCursor(CURSOR_POINT)
                 self.setToolTip(self.tr("Click & drag to move point"))
                 self.setStatusTip(self.toolTip())
                 self.update()
                 break
-            elif shape.containsPoint(pos):
+            elif annotation.containsPoint(pos):
                 if self.selectedVertex():
-                    self.hShape.highlightClear()
+                    self.hAnnotation.highlightClear()
                 self.prevhVertex = self.hVertex
                 self.hVertex = None
-                self.prevhShape = self.hShape = shape
+                self.prevhAnnotation = self.hAnnotation = annotation
                 self.prevhEdge = self.hEdge = index_edge
                 self.setToolTip(
-                    self.tr("Click & drag to move shape '%s'") % shape.label
+                    self.tr("Click & drag to move annotation '%s'") % annotation.label
                 )
                 self.setStatusTip(self.toolTip())
                 self.overrideCursor(CURSOR_GRAB)
@@ -287,34 +287,34 @@ class Canvas(QtWidgets.QWidget):
                 break
         else:  # Nothing found, clear highlights, reset state.
             self.unHighlight()
-        self.edgeSelected.emit(self.hEdge is not None, self.hShape)
+        self.edgeSelected.emit(self.hEdge is not None, self.hAnnotation)
         self.vertexSelected.emit(self.hVertex is not None)
 
     def addPointToEdge(self):
-        shape = self.prevhShape
+        annotation = self.prevhAnnotation
         index = self.prevhEdge
         point = self.prevMovePoint
-        if shape is None or index is None or point is None:
+        if annotation is None or index is None or point is None:
             return
-        shape.insertPoint(index, point)
-        shape.highlightVertex(index, shape.MOVE_VERTEX)
-        self.hShape = shape
+        annotation.insertPoint(index, point)
+        annotation.highlightVertex(index, annotation.MOVE_VERTEX)
+        self.hAnnotation = annotation
         self.hVertex = index
         self.hEdge = None
-        self.movingShape = True
+        self.movingAnnotation = True
 
     def removeSelectedPoint(self):
-        shape = self.prevhShape
+        annotation = self.prevhAnnotation
         point = self.prevMovePoint
-        if shape is None or point is None:
+        if annotation is None or point is None:
             return
-        index = shape.nearestVertex(point, self.epsilon)
-        shape.removePoint(index)
-        # shape.highlightVertex(index, shape.MOVE_VERTEX)
-        self.hShape = shape
+        index = annotation.nearestVertex(point, self.epsilon)
+        annotation.removePoint(index)
+        # annotation.highlightVertex(index, annotation.MOVE_VERTEX)
+        self.hAnnotation = annotation
         self.hVertex = None
         self.hEdge = None
-        self.movingShape = True  # Save changes
+        self.movingAnnotation = True  # Save changes
 
     def mousePressEvent(self, ev):
         if QT5:
@@ -324,7 +324,7 @@ class Canvas(QtWidgets.QWidget):
         if ev.button() == QtCore.Qt.LeftButton:
             if self.drawing():
                 if self.current:
-                    # Add point to existing shape.
+                    # Add point to existing annotation.
                     if self.createMode == "polygon":
                         self.current.addPoint(self.line[1])
                         self.line[0] = self.current[-1]
@@ -340,8 +340,8 @@ class Canvas(QtWidgets.QWidget):
                         if int(ev.modifiers()) == QtCore.Qt.ControlModifier:
                             self.finalise()
                 elif not self.outOfPixmap(pos):
-                    # Create new shape.
-                    self.current = Shape(shape_type=self.createMode)
+                    # Create new annotation.
+                    self.current = Annotation(shape_type=self.createMode)
                     self.current.addPoint(pos)
                     if self.createMode == "point":
                         self.finalise()
@@ -354,27 +354,27 @@ class Canvas(QtWidgets.QWidget):
                         self.update()
             else:
                 group_mode = int(ev.modifiers()) == QtCore.Qt.ControlModifier
-                self.selectShapePoint(pos, multiple_selection_mode=group_mode)
+                self.selectAnnotationPoint(pos, multiple_selection_mode=group_mode)
                 self.prevPoint = pos
                 self.repaint()
         elif ev.button() == QtCore.Qt.RightButton and self.editing():
             group_mode = int(ev.modifiers()) == QtCore.Qt.ControlModifier
-            self.selectShapePoint(pos, multiple_selection_mode=group_mode)
+            self.selectAnnotationPoint(pos, multiple_selection_mode=group_mode)
             self.prevPoint = pos
             self.repaint()
 
     def mouseReleaseEvent(self, ev):
         if ev.button() == QtCore.Qt.RightButton:
-            menu = self.menus[len(self.selectedShapesCopy) > 0]
+            menu = self.menus[len(self.selectedAnnotationsCopy) > 0]
             self.restoreCursor()
             if (
                 not menu.exec_(self.mapToGlobal(ev.pos()))
-                and self.selectedShapesCopy
+                and self.selectedAnnotationsCopy
             ):
                 # Cancel the move by deleting the shadow copy.
-                self.selectedShapesCopy = []
+                self.selectedAnnotationsCopy = []
                 self.repaint()
-        elif ev.button() == QtCore.Qt.LeftButton and self.selectedShapes:
+        elif ev.button() == QtCore.Qt.LeftButton and self.selectedAnnotations:
             self.overrideCursor(CURSOR_GRAB)
             if (
                 self.editing()
@@ -390,45 +390,45 @@ class Canvas(QtWidgets.QWidget):
                 # Delete point if: left-click + SHIFT on a point
                 self.removeSelectedPoint()
 
-        if self.movingShape and self.hShape:
-            index = self.shapes.index(self.hShape)
+        if self.movingAnnotation and self.hAnnotation:
+            index = self.annotations.index(self.hAnnotation)
             if (
-                self.shapesBackups[-1][index].points
-                != self.shapes[index].points
+                self.annotationsBackups[-1][index].points
+                != self.annotations[index].points
             ):
-                self.storeShapes()
-                self.shapeMoved.emit()
+                self.storeAnnotations()
+                self.annotationMoved.emit()
 
-            self.movingShape = False
+            self.movingAnnotation = False
 
     def endMove(self, copy):
-        assert self.selectedShapes and self.selectedShapesCopy
-        assert len(self.selectedShapesCopy) == len(self.selectedShapes)
+        assert self.selectedAnnotations and self.selectedAnnotationsCopy
+        assert len(self.selectedAnnotationsCopy) == len(self.selectedAnnotations)
         if copy:
-            for i, shape in enumerate(self.selectedShapesCopy):
-                self.shapes.append(shape)
-                self.selectedShapes[i].selected = False
-                self.selectedShapes[i] = shape
+            for i, annotation in enumerate(self.selectedAnnotationsCopy):
+                self.annotations.append(annotation)
+                self.selectedAnnotations[i].selected = False
+                self.selectedAnnotations[i] = annotation
         else:
-            for i, shape in enumerate(self.selectedShapesCopy):
-                self.selectedShapes[i].points = shape.points
-        self.selectedShapesCopy = []
+            for i, annotation in enumerate(self.selectedAnnotationsCopy):
+                self.selectedAnnotations[i].points = annotation.points
+        self.selectedAnnotationsCopy = []
         self.repaint()
-        self.storeShapes()
+        self.storeAnnotations()
         return True
 
-    def hideBackroundShapes(self, value):
+    def hideBackroundAnnotations(self, value):
         self.hideBackround = value
-        if self.selectedShapes:
-            # Only hide other shapes if there is a current selection.
-            # Otherwise the user will not be able to select a shape.
+        if self.selectedAnnotations:
+            # Only hide other annotations if there is a current selection.
+            # Otherwise the user will not be able to select a annotation.
             self.setHiding(True)
             self.repaint()
 
     def setHiding(self, enable=True):
         self._hideBackround = self.hideBackround if enable else False
 
-    def canCloseShape(self):
+    def canCloseAnnotation(self):
         return self.drawing() and self.current and len(self.current) > 2
 
     def mouseDoubleClickEvent(self, ev):
@@ -436,39 +436,39 @@ class Canvas(QtWidgets.QWidget):
         # adds an extra one before this handler is called.
         if (
             self.double_click == "close"
-            and self.canCloseShape()
+            and self.canCloseAnnotation()
             and len(self.current) > 3
         ):
             self.current.popPoint()
             self.finalise()
 
-    def selectShapes(self, shapes):
+    def selectAnnotations(self, annotations):
         self.setHiding()
-        self.selectionChanged.emit(shapes)
+        self.selectionChanged.emit(annotations)
         self.update()
 
-    def selectShapePoint(self, point, multiple_selection_mode):
-        """Select the first shape created which contains this point."""
+    def selectAnnotationPoint(self, point, multiple_selection_mode):
+        """Select the first annotation created which contains this point."""
         if self.selectedVertex():  # A vertex is marked for selection.
-            index, shape = self.hVertex, self.hShape
-            shape.highlightVertex(index, shape.MOVE_VERTEX)
+            index, annotation = self.hVertex, self.hAnnotation
+            annotation.highlightVertex(index, annotation.MOVE_VERTEX)
         else:
-            for shape in reversed(self.shapes):
-                if self.isVisible(shape) and shape.containsPoint(point):
-                    self.calculateOffsets(shape, point)
+            for annotation in reversed(self.annotations):
+                if self.isVisible(annotation) and annotation.containsPoint(point):
+                    self.calculateOffsets(annotation, point)
                     self.setHiding()
                     if multiple_selection_mode:
-                        if shape not in self.selectedShapes:
+                        if annotation not in self.selectedAnnotations:
                             self.selectionChanged.emit(
-                                self.selectedShapes + [shape]
+                                self.selectedAnnotations + [annotation]
                             )
                     else:
-                        self.selectionChanged.emit([shape])
+                        self.selectionChanged.emit([annotation])
                     return
-        self.deSelectShape()
+        self.deSelectAnnotation()
 
-    def calculateOffsets(self, shape, point):
-        rect = shape.boundingRect()
+    def calculateOffsets(self, annotation, point):
+        rect = annotation.boundingRect()
         x1 = rect.x() - point.x()
         y1 = rect.y() - point.y()
         x2 = (rect.x() + rect.width() - 1) - point.x()
@@ -476,13 +476,13 @@ class Canvas(QtWidgets.QWidget):
         self.offsets = QtCore.QPoint(x1, y1), QtCore.QPoint(x2, y2)
 
     def boundedMoveVertex(self, pos):
-        index, shape = self.hVertex, self.hShape
-        point = shape[index]
+        index, annotation = self.hVertex, self.hAnnotation
+        point = annotation[index]
         if self.outOfPixmap(pos):
             pos = self.intersectionPoint(point, pos)
-        shape.moveVertexBy(index, pos - point)
+        annotation.moveVertexBy(index, pos - point)
 
-    def boundedMoveShapes(self, shapes, pos):
+    def boundedMoveAnnotations(self, annotations, pos):
         if self.outOfPixmap(pos):
             return False  # No need to move
         o1 = pos + self.offsets[0]
@@ -495,51 +495,51 @@ class Canvas(QtWidgets.QWidget):
                 min(0, self.pixmap.height() - o2.y()),
             )
         # XXX: The next line tracks the new position of the cursor
-        # relative to the shape, but also results in making it
+        # relative to the annotation, but also results in making it
         # a bit "shaky" when nearing the border and allows it to
-        # go outside of the shape's area for some reason.
-        # self.calculateOffsets(self.selectedShapes, pos)
+        # go outside of the annotation's area for some reason.
+        # self.calculateOffsets(self.selectedAnnotations, pos)
         dp = pos - self.prevPoint
         if dp:
-            for shape in shapes:
-                shape.moveBy(dp)
+            for annotation in annotations:
+                annotation.moveBy(dp)
             self.prevPoint = pos
             return True
         return False
 
-    def deSelectShape(self):
-        if self.selectedShapes:
+    def deSelectAnnotation(self):
+        if self.selectedAnnotations:
             self.setHiding(False)
             self.selectionChanged.emit([])
             self.update()
 
     def deleteSelected(self):
-        deleted_shapes = []
-        if self.selectedShapes:
-            for shape in self.selectedShapes:
-                self.shapes.remove(shape)
-                deleted_shapes.append(shape)
-            self.storeShapes()
-            self.selectedShapes = []
+        deleted_annotations = []
+        if self.selectedAnnotations:
+            for annotation in self.selectedAnnotations:
+                self.annotations.remove(annotation)
+                deleted_annotations.append(annotation)
+            self.storeAnnotations()
+            self.selectedAnnotations = []
             self.update()
-        return deleted_shapes
+        return deleted_annotations
 
-    def copySelectedShapes(self):
-        if self.selectedShapes:
-            self.selectedShapesCopy = [s.copy() for s in self.selectedShapes]
-            self.boundedShiftShapes(self.selectedShapesCopy)
+    def copySelectedAnnotations(self):
+        if self.selectedAnnotations:
+            self.selectedAnnotationsCopy = [s.copy() for s in self.selectedAnnotations]
+            self.boundedShiftAnnotations(self.selectedAnnotationsCopy)
             self.endMove(copy=True)
-        return self.selectedShapes
+        return self.selectedAnnotations
 
-    def boundedShiftShapes(self, shapes):
+    def boundedShiftAnnotations(self, annotations):
         # Try to move in one direction, and if it fails in another.
         # Give up if both fail.
-        point = shapes[0][0]
+        point = annotations[0][0]
         offset = QtCore.QPoint(2.0, 2.0)
         self.offsets = QtCore.QPoint(), QtCore.QPoint()
         self.prevPoint = point
-        if not self.boundedMoveShapes(shapes, point - offset):
-            self.boundedMoveShapes(shapes, point + offset)
+        if not self.boundedMoveAnnotations(annotations, point - offset):
+            self.boundedMoveAnnotations(annotations, point + offset)
 
     def paintEvent(self, event):
         if not self.pixmap:
@@ -555,18 +555,18 @@ class Canvas(QtWidgets.QWidget):
         p.translate(self.offsetToCenter())
 
         p.drawPixmap(0, 0, self.pixmap)
-        Shape.scale = self.scale
-        for shape in self.shapes:
-            if (shape.selected or not self._hideBackround) and self.isVisible(
-                shape
+        Annotation.scale = self.scale
+        for annotation in self.annotations:
+            if (annotation.selected or not self._hideBackround) and self.isVisible(
+                annotation
             ):
-                shape.fill = shape.selected or shape == self.hShape
-                shape.paint(p)
+                annotation.fill = annotation.selected or annotation == self.hAnnotation
+                annotation.paint(p)
         if self.current:
             self.current.paint(p)
             self.line.paint(p)
-        if self.selectedShapesCopy:
-            for s in self.selectedShapesCopy:
+        if self.selectedAnnotationsCopy:
+            for s in self.selectedAnnotationsCopy:
                 s.paint(p)
 
         if (
@@ -575,10 +575,10 @@ class Canvas(QtWidgets.QWidget):
             and self.current is not None
             and len(self.current.points) >= 2
         ):
-            drawing_shape = self.current.copy()
-            drawing_shape.addPoint(self.line[1])
-            drawing_shape.fill = True
-            drawing_shape.paint(p)
+            drawing_annotation = self.current.copy()
+            drawing_annotation.addPoint(self.line[1])
+            drawing_annotation.fill = True
+            drawing_annotation.paint(p)
 
         p.end()
 
@@ -602,11 +602,11 @@ class Canvas(QtWidgets.QWidget):
     def finalise(self):
         assert self.current
         self.current.close()
-        self.shapes.append(self.current)
-        self.storeShapes()
+        self.annotations.append(self.current)
+        self.storeAnnotations()
         self.current = None
         self.setHiding(False)
-        self.newShape.emit()
+        self.newAnnotation.emit()
         self.update()
 
     def closeEnough(self, p1, p2):
@@ -716,20 +716,20 @@ class Canvas(QtWidgets.QWidget):
             self.current = None
             self.drawingPolygon.emit(False)
             self.update()
-        elif key == QtCore.Qt.Key_Return and self.canCloseShape():
+        elif key == QtCore.Qt.Key_Return and self.canCloseAnnotation():
             self.finalise()
 
     def setLastLabel(self, text, flags):
         assert text
-        self.shapes[-1].label = text
-        self.shapes[-1].flags = flags
-        self.shapesBackups.pop()
-        self.storeShapes()
-        return self.shapes[-1]
+        self.annotations[-1].label = text
+        self.annotations[-1].flags = flags
+        self.annotationsBackups.pop()
+        self.storeAnnotations()
+        return self.annotations[-1]
 
     def undoLastLine(self):
-        assert self.shapes
-        self.current = self.shapes.pop()
+        assert self.annotations
+        self.current = self.annotations.pop()
         self.current.setOpen()
         if self.createMode in ["polygon", "linestrip"]:
             self.line.points = [self.current[-1], self.current[0]]
@@ -750,26 +750,26 @@ class Canvas(QtWidgets.QWidget):
             self.drawingPolygon.emit(False)
         self.repaint()
 
-    def loadPixmap(self, pixmap, clear_shapes=True):
+    def loadPixmap(self, pixmap, clear_annotations=True):
         self.pixmap = pixmap
-        if clear_shapes:
-            self.shapes = []
+        if clear_annotations:
+            self.annotations = []
         self.repaint()
 
-    def loadShapes(self, shapes, replace=True):
+    def loadAnnotations(self, annotations, replace=True):
         if replace:
-            self.shapes = list(shapes)
+            self.annotations = list(annotations)
         else:
-            self.shapes.extend(shapes)
-        self.storeShapes()
+            self.annotations.extend(annotations)
+        self.storeAnnotations()
         self.current = None
-        self.hShape = None
+        self.hAnnotation = None
         self.hVertex = None
         self.hEdge = None
         self.repaint()
 
-    def setShapeVisible(self, shape, value):
-        self.visible[shape] = value
+    def setAnnotationVisible(self, annotation, value):
+        self.visible[annotation] = value
         self.repaint()
 
     def overrideCursor(self, cursor):
@@ -783,5 +783,5 @@ class Canvas(QtWidgets.QWidget):
     def resetState(self):
         self.restoreCursor()
         self.pixmap = None
-        self.shapesBackups = []
+        self.annotationsBackups = []
         self.update()

@@ -9,15 +9,15 @@
 <div align="center">
   <a href="https://pypi.python.org/pypi/labelme"><img src="https://img.shields.io/pypi/v/labelme.svg"></a>
   <a href="https://pypi.org/project/labelme"><img src="https://img.shields.io/pypi/pyversions/labelme.svg"></a>
-  <a href="https://github.com/wkentaro/labelme/actions"><img src="https://github.com/wkentaro/labelme/workflows/ci/badge.svg?branch=master&event=push"></a>
-  <a href="https://hub.docker.com/r/wkentaro/labelme"><img src="https://img.shields.io/docker/build/wkentaro/labelme.svg"></a>
+  <a href="https://github.com/codebaragi23/labelme/actions"><img src="https://github.com/codebaragi23/labelme/workflows/ci/badge.svg?branch=master&event=push"></a>
+  <a href="https://hub.docker.com/r/codebaragi23/labelme"><img src="https://img.shields.io/docker/build/codebaragi23/labelme.svg"></a>
 </div>
 
 <div align="center">
   <a href="#installation"><b>Installation</b></a> |
   <a href="#usage"><b>Usage</b></a> |
-  <a href="https://github.com/wkentaro/labelme/tree/master/examples/tutorial#tutorial-single-image-example"><b>Tutorial</b></a> |
-  <a href="https://github.com/wkentaro/labelme/tree/master/examples"><b>Examples</b></a> |
+  <a href="https://github.com/codebaragi23/labelme/tree/master/examples/tutorial#tutorial-single-image-example"><b>Tutorial</b></a> |
+  <a href="https://github.com/codebaragi23/labelme/tree/master/examples"><b>Examples</b></a> |
   <a href="https://www.youtube.com/playlist?list=PLI6LvFw0iflh3o33YYnVIfOpaO0hc5Dzw"><b>Youtube FAQ</b></a>
 </div>
 
@@ -45,9 +45,9 @@ It is written in Python and uses Qt for its graphical interface.
 ## Features
 
 - [x] Image annotation for polygon, rectangle, circle, line and point. ([tutorial](examples/tutorial))
-- [x] Image flag annotation for classification and cleaning. ([#166](https://github.com/wkentaro/labelme/pull/166))
+- [x] Image flag annotation for classification and cleaning. ([#166](https://github.com/codebaragi23/labelme/pull/166))
 - [x] Video annotation. ([video annotation](examples/video_annotation))
-- [x] GUI customization (predefined labels / flags, auto-saving, label validation, etc). ([#144](https://github.com/wkentaro/labelme/pull/144))
+- [x] GUI customization (predefined labels / flags, auto-saving, label validation, etc). ([#144](https://github.com/codebaragi23/labelme/pull/144))
 - [x] Exporting VOC-format dataset for semantic/instance segmentation. ([semantic segmentation](examples/semantic_segmentation), [instance segmentation](examples/instance_segmentation))
 - [x] Exporting COCO-format dataset for instance segmentation. ([instance segmentation](examples/instance_segmentation))
 
@@ -66,7 +66,7 @@ There are options:
 
 - Platform agonistic installation: [Anaconda](#anaconda), [Docker](#docker)
 - Platform specific installation: [Ubuntu](#ubuntu), [macOS](#macos), [Windows](#windows)
-- Pre-build binaries from [the release section](https://github.com/wkentaro/labelme/releases)
+- Pre-build binaries from [the release section](https://github.com/codebaragi23/labelme/releases)
 
 ### Anaconda
 
@@ -80,7 +80,7 @@ source activate labelme
 conda install pyqt
 pip install labelme
 # if you'd like to use the latest version. run below:
-# pip install git+https://github.com/wkentaro/labelme.git
+# pip install git+https://github.com/codebaragi23/labelme.git
 
 # python3
 conda create --name=labelme python=3.6
@@ -100,11 +100,11 @@ You need install [docker](https://www.docker.com), then run below:
 ```bash
 # on macOS
 socat TCP-LISTEN:6000,reuseaddr,fork UNIX-CLIENT:\"$DISPLAY\" &
-docker run -it -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=docker.for.mac.host.internal:0 -v $(pwd):/root/workdir wkentaro/labelme
+docker run -it -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=docker.for.mac.host.internal:0 -v $(pwd):/root/workdir codebaragi23/labelme
 
 # on Linux
 xhost +
-docker run -it -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=:0 -v $(pwd):/root/workdir wkentaro/labelme
+docker run -it -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=:0 -v $(pwd):/root/workdir codebaragi23/labelme
 ```
 
 ### Ubuntu
@@ -120,7 +120,7 @@ sudo apt-get install python3-pyqt5  # PyQt5
 sudo pip3 install labelme
 
 # or install standalone executable from:
-# https://github.com/wkentaro/labelme/releases
+# https://github.com/codebaragi23/labelme/releases
 ```
 
 ### Ubuntu 19.10+ / Debian (sid)
@@ -137,7 +137,7 @@ brew install pyqt  # maybe pyqt5
 pip install labelme  # both python2/3 should work
 
 # or install standalone executable/app from:
-# https://github.com/wkentaro/labelme/releases
+# https://github.com/codebaragi23/labelme/releases
 ```
 
 ### Windows
@@ -208,11 +208,11 @@ pytest -v tests
 ## Developing
 
 ```bash
-git clone https://github.com/wkentaro/labelme.git
+git clone https://github.com/codebaragi23/labelme.git
 cd labelme
 
 # Install anaconda3 and labelme
-curl -L https://github.com/wkentaro/dotfiles/raw/master/local/bin/install_anaconda3.sh | bash -s .
+curl -L https://github.com/codebaragi23/dotfiles/raw/master/local/bin/install_anaconda3.sh | bash -s .
 source .anaconda3/bin/activate
 pip install -e .
 ```
@@ -249,7 +249,7 @@ If you use this project in your research or wish to refer to the baseline result
 @misc{labelme2016,
   author =       {Kentaro Wada},
   title =        {{labelme: Image Polygonal Annotation with Python}},
-  howpublished = {\url{https://github.com/wkentaro/labelme}},
+  howpublished = {\url{https://github.com/codebaragi23/labelme}},
   year =         {2016}
 }
 ```

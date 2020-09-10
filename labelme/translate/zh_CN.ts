@@ -312,8 +312,7 @@
     </message>
     <message>
         <location filename="../app.py" line="324"/>
-        <source>&amp;Hide
-Polygons</source>
+        <source>&amp;Hide Polygons</source>
         <translation>隐藏多边形(&amp;H)</translation>
     </message>
     <message>
