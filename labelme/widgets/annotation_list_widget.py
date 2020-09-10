@@ -67,11 +67,11 @@ class HTMLDelegate(QtWidgets.QStyledItemDelegate):
         )
 
 
-class LabelListWidgetItem(QtGui.QStandardItem):
-    def __init__(self, text=None, shape=None):
-        super(LabelListWidgetItem, self).__init__()
+class AnnotationListWidgetItem(QtGui.QStandardItem):
+    def __init__(self, text=None, annotation=None):
+        super(AnnotationListWidgetItem, self).__init__()
         self.setText(text)
-        self.setShape(shape)
+        self.setAnnotaion(annotation)
 
         self.setCheckable(True)
         self.setCheckState(Qt.Checked)
@@ -79,12 +79,12 @@ class LabelListWidgetItem(QtGui.QStandardItem):
         self.setTextAlignment(Qt.AlignBottom)
 
     def clone(self):
-        return LabelListWidgetItem(self.text(), self.shape())
+        return AnnotationListWidgetItem(self.text(), self.annotation())
 
-    def setShape(self, shape):
-        self.setData(shape, Qt.UserRole)
+    def setAnnotaion(self, annotation):
+        self.setData(annotation, Qt.UserRole)
 
-    def shape(self):
+    def annotation(self):
         return self.data(Qt.UserRole)
 
     def __hash__(self):
@@ -104,18 +104,18 @@ class StandardItemModel(QtGui.QStandardItemModel):
         return ret
 
 
-class LabelListWidget(QtWidgets.QListView):
+class AnnotationListWidget(QtWidgets.QListView):
 
-    itemDoubleClicked = QtCore.Signal(LabelListWidgetItem)
+    itemDoubleClicked = QtCore.Signal(AnnotationListWidgetItem)
     itemSelectionChanged = QtCore.Signal(list, list)
 
     def __init__(self):
-        super(LabelListWidget, self).__init__()
+        super(AnnotationListWidget, self).__init__()
         self._selectedItems = []
 
         self.setWindowFlags(Qt.Window)
         self.setModel(StandardItemModel())
-        self.model().setItemPrototype(LabelListWidgetItem())
+        self.model().setItemPrototype(AnnotationListWidgetItem())
         self.setItemDelegate(HTMLDelegate())
         self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
@@ -161,8 +161,8 @@ class LabelListWidget(QtWidgets.QListView):
         self.scrollTo(self.model().indexFromItem(item))
 
     def addItem(self, item):
-        if not isinstance(item, LabelListWidgetItem):
-            raise TypeError("item must be LabelListWidgetItem")
+        if not isinstance(item, AnnotationListWidgetItem):
+            raise TypeError("item must be AnnotationListWidgetItem")
         self.model().setItem(self.model().rowCount(), 0, item)
         item.setSizeHint(self.itemDelegate().sizeHint(None, None))
 
@@ -174,10 +174,10 @@ class LabelListWidget(QtWidgets.QListView):
         index = self.model().indexFromItem(item)
         self.selectionModel().select(index, QtCore.QItemSelectionModel.Select)
 
-    def findItemByShape(self, shape):
+    def findItemByAnnotation(self, annotation):
         for row in range(self.model().rowCount()):
             item = self.model().item(row, 0)
-            if item.shape() == shape:
+            if item.annotation() == annotation:
                 return item
 
     def clear(self):

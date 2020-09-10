@@ -21,7 +21,7 @@ def get_img_and_lbl():
     img, data = get_img_and_data()
 
     label_name_to_value = {"__background__": 0}
-    for shape in data["shapes"]:
+    for shape in data["annotations"]:
         label_name = shape["label"]
         label_value = len(label_name_to_value)
         label_name_to_value[label_name] = label_value
@@ -32,6 +32,6 @@ def get_img_and_lbl():
         label_names[label_value] = label_name
 
     lbl, _ = shape_module.shapes_to_label(
-        img.shape, data["shapes"], label_name_to_value
+        img.shape, data["annotations"], label_name_to_value
     )
     return img, lbl, label_names

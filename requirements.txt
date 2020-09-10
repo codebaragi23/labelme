@@ -1,0 +1,23 @@
+# pip install -r requirements.txt
+
+# base ----------------------------------------
+imgviz>=0.11.0
+matplotlib
+numpy
+Pillow>=2.8.0
+PyYAML
+qtpy
+termcolor
+tifffile
+imagecodecs
+lxml
+
+# coco ----------------------------------------
+# pycocotools>=2.0
+
+# export --------------------------------------
+# coremltools==4.0b2
+# onnx>=1.7.0
+
+# extras --------------------------------------
+# thop
