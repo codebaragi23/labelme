@@ -33,7 +33,6 @@ class LabelFileError(Exception):
 
 
 class LabelFile(object):
-
   suffix = ".json"
 
   def __init__(self, filename=None):
@@ -43,6 +42,7 @@ class LabelFile(object):
     if filename is not None:
       self.load(filename)
     self.filename = filename
+    self.format=format
 
   @staticmethod
   def load_image_file(filename):
@@ -74,7 +74,8 @@ class LabelFile(object):
       f.seek(0)
       return f.read()
 
-  def load(self, filename):
+
+  def load_simple(self, filename, data):
     keys = [
       "version",
       "imageData",
@@ -86,65 +87,116 @@ class LabelFile(object):
     ]
     annotation_keys = [
       "label",
+      "shape_type",
       "points",
       "group_id",
-      "shape_type",
       "flags",
     ]
-    try:
-      with open(filename, "r") as f:
-        data = json.load(f)
-      version = data.get("version")
-      if version is None:
-        logger.warn(
-          "Loading JSON file ({}) of unknown version".format(
-            filename
-          )
-        )
-      elif version.split(".")[0] != __version__.split(".")[0]:
-        logger.warn(
-          "This JSON file ({}) may be incompatible with "
-          "current labelme. version in file: {}, "
-          "current version: {}".format(
-            filename, version, __version__
-          )
-        )
 
-      if data["imageData"] is not None:
-        imageData = base64.b64decode(data["imageData"])
-        if PY2 and QT4:
-          imageData = utils.img_data_to_png_data(imageData)
-      else:
-        # relative path from label file to relative path from cwd
-        imagePath = osp.join(osp.dirname(filename), data["imagePath"])
-        imageData = self.load_image_file(imagePath)
-      flags = data.get("flags") or {}
-      imagePath = data["imagePath"]
-      self._check_image_height_and_width(
-        base64.b64encode(imageData).decode("utf-8"),
-        data.get("imageHeight"),
-        data.get("imageWidth"),
+    if data["imageData"] is not None:
+      imageData = base64.b64decode(data["imageData"])
+      if PY2 and QT4:
+        imageData = utils.img_data_to_png_data(imageData)
+    else:
+      # relative path from label file to relative path from cwd
+      imagePath = osp.join(osp.dirname(filename), data["imagePath"])
+      imageData = self.load_image_file(imagePath)
+
+    flags = data.get("flags") or {}
+    imagePath = data["imagePath"]
+    self._check_image_height_and_width(
+      base64.b64encode(imageData).decode("utf-8"),
+      data.get("imageHeight"),
+      data.get("imageWidth"),
+    )
+    annotations = [
+      dict(
+        label=annot["label"],
+        shape_type=annot.get("shape_type", "polygon"),
+        points=annot["points"],
+        flags=annot.get("flags", {}),
+        group_id=annot.get("group_id"),
+        other_data={
+          k: v for k, v in annot.items() if k not in annotation_keys
+        },
       )
-      annotations = [
-        dict(
-          label=annot["label"],
-          points=annot["points"],
-          shape_type=annot.get("shape_type", "polygon"),
-          flags=annot.get("flags", {}),
-          group_id=annot.get("group_id"),
-          other_data={
-            k: v for k, v in annot.items() if k not in annotation_keys
-          },
-        )
-        for annot in data["annotations"]
-      ]
-    except Exception as e:
-      raise LabelFileError(e)
+      for annot in data["annotations"]
+    ]
 
     otherData = {}
     for key, value in data.items():
       if key not in keys:
         otherData[key] = value
+
+    return flags, annotations, imagePath, imageData, otherData
+
+  def load_geojson(self, filename, data):
+    keys = [
+      "features",  # polygonal annotations
+    ]
+    features_keys = [
+      "type",
+      "properties",
+      "geometry",
+    ]
+    annotation_keys = [
+      "type",
+      "coordinates",
+    ]
+
+    # relative path from label file to relative path from cwd
+    imageData = None
+
+    flags = {}
+    imagePath = None
+    annotations = [
+      dict(
+        label=feature["properties"]["작물ID"],
+        shape_type=feature["geometry"]["type"].lower(),
+        points=[[x, -y] for x, y in feature["geometry"]["coordinates"][0]],
+        flags=feature.get("flags", {}),
+        group_id=feature.get("group_id", None),
+        other_data={
+          k:v for k, v in feature.items() if k not in annotation_keys
+        },
+      )
+      for feature in data["features"]
+    ]
+
+    otherData = {k:v for k, v in data.items() if k not in keys}
+    return flags, annotations, imagePath, imageData, otherData
+
+  def load(self, filename):
+    try:
+      with open(filename, "r") as f:
+        data = json.load(f)
+        version = data.get("version")
+        self.format = 'simple'
+        if version is None:
+          if data.get("type") == "FeatureCollection":
+            self.format = "GeoJSON"
+          else:
+            logger.warn(
+              "Loading JSON file ({}) of unknown version".format(
+                filename
+              )
+            )
+        elif version.split(".")[0] != __version__.split(".")[0]:
+          logger.warn(
+            "This JSON file ({}) may be incompatible with "
+            "current labelme. version in file: {}, "
+            "current version: {}".format(
+              filename, version, __version__
+            )
+          )
+      
+      if self.format == 'simple':
+        flags, annotations, imagePath, imageData, otherData = self.load_simple(filename, data)
+      elif self.format == 'GeoJSON':
+        flags, annotations, imagePath, imageData, otherData = self.load_geojson(filename, data)
+
+    except Exception as e:
+      raise LabelFileError(e)
 
     # Only replace data after everything is loaded.
     self.flags = flags
@@ -181,6 +233,7 @@ class LabelFile(object):
     imageData=None,
     otherData=None,
     flags=None,
+    format="simple"
   ):
     if imageData is not None:
       imageData = base64.b64encode(imageData).decode("utf-8")
@@ -191,18 +244,28 @@ class LabelFile(object):
       otherData = {}
     if flags is None:
       flags = {}
-    data = dict(
-      version=__version__,
-      flags=flags,
-      annotations=annotations,
-      imagePath=imagePath,
-      imageData=imageData,
-      imageHeight=imageHeight,
-      imageWidth=imageWidth,
-    )
-    for key, value in otherData.items():
-      assert key not in data
-      data[key] = value
+    
+    if format == "simple":
+      data = dict(
+        version=__version__,
+        flags=flags,
+        annotations=annotations,
+        imagePath=imagePath,
+        imageData=imageData,
+        imageHeight=imageHeight,
+        imageWidth=imageWidth,
+      )
+      for key, value in otherData.items():
+        assert key not in data
+        data[key] = value
+
+    elif format == 'GeoJSON':
+      data = dict(
+        type=otherData.get("type", "FeatureCollection"),
+        crs=otherData.get("crs", { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32652" } }),
+        features= [dict({"type":"Feature", "properties":{"관리번호":None, "작물ID": k["label"], "작업위치":None}, "geometry":{"type":k["shape_type"].capitalize(), "coordinates":[[[x, -y] for x, y in k["points"] ]]}}) for k in annotations]
+      )
+
     try:
       with open(filename, "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

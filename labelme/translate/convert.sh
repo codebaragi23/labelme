@@ -1,0 +1,1 @@
+lrelease ko_KR.ts

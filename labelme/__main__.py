@@ -165,10 +165,10 @@ def main():
   app.setApplicationName(__appname__)
   app.setWindowIcon(newIcon("icon"))
 
-  support_language = {'English':'en_US', 'Korean':'ko_KR'}
-  #exitcode = QtCore.QLocale.system().name()
-  exitcode = "en_US"
-  while exitcode in support_language.values():
+  support_languages = {'English':'en_US', 'Korean':'ko_KR'}
+  exitcode = QtCore.QLocale.system().name()
+  #exitcode = "en_US"
+  while exitcode in support_languages.values():
     translator = QtCore.QTranslator()
     translator.load(
       exitcode,
@@ -177,7 +177,7 @@ def main():
     app.installTranslator(translator)
 
     win = MainWindow(
-      support_language=list(support_language.keys()),
+      support_languages=list(support_languages.keys()),
       config=config,
       filename=filename,
       output_file=output_file,
@@ -192,8 +192,8 @@ def main():
     win.show()
     win.raise_()
     exitcode = app.exec_()
-    if exitcode - MainWindow.RESTART_CODE in range(len(support_language)):
-      exitcode = list(support_language.values())[exitcode - MainWindow.RESTART_CODE]
+    if exitcode - MainWindow.RESTART_CODE in range(len(support_languages)):
+      exitcode = list(support_languages.values())[exitcode - MainWindow.RESTART_CODE]
       win.close()
     app.removeTranslator(translator)
     
