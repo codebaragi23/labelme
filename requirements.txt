@@ -11,6 +11,7 @@ termcolor
 tifffile
 imagecodecs
 lxml
+geopandas
 
 # coco ----------------------------------------
 # pycocotools>=2.0

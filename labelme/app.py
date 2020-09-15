@@ -7,6 +7,8 @@ import os.path as osp
 import shutil
 import re
 import webbrowser
+import numpy as np
+import geopandas
 
 import lxml.builder
 import lxml.etree
@@ -55,7 +57,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def __init__(
     self,
-    support_language,
+    support_languages,
     config=None,
     filename=None,
     output=None,
@@ -73,7 +75,9 @@ class MainWindow(QtWidgets.QMainWindow):
     if config is None:
       config = get_config()
     self._config = config
-    self.support_language = support_language
+    self.support_languages = support_languages
+    self.support_formats = ["simple", "GeoJSON"]
+    self.output_format = self._config["label_format"]
 
     # set default annotation colors
     Annotation.line_color = QtGui.QColor(*self._config["annotation"]["line_color"])
@@ -304,6 +308,13 @@ class MainWindow(QtWidgets.QMainWindow):
       slot=self.onChangeLanguage,
       icon="translate",
       tip=self.tr(u"Change display language"),
+    )
+
+    changeOutputFormat = action(
+      self.tr("Change &Format"),
+      slot=self.onChangeOutputFormat,
+      icon="save",
+      tip=self.tr(u"Change output foramt"),
     )
 
     close = action(
@@ -743,6 +754,7 @@ class MainWindow(QtWidgets.QMainWindow):
       (
         changeOutputDir,
         changeLanguage,
+        changeOutputFormat,
       ),
     )
 
@@ -818,7 +830,6 @@ class MainWindow(QtWidgets.QMainWindow):
       openNextImg,
       openPrevImg,
       save,
-      deleteFile,
       None,
       createMode,
       editMode,
@@ -1266,8 +1277,8 @@ class MainWindow(QtWidgets.QMainWindow):
     annot = []
     for annotation in annotations:
       label = annotation["label"]
-      points = annotation["points"]
       shape_type = annotation["shape_type"]
+      points = annotation["points"]
       flags = annotation["flags"]
       group_id = annotation["group_id"]
       other_data = annotation["other_data"]
@@ -1305,9 +1316,9 @@ class MainWindow(QtWidgets.QMainWindow):
     data.update(
       dict(
         label=s.label.encode("utf-8") if PY2 else s.label,
+        shape_type=s.shape_type,
         points=[(p.x(), p.y()) for p in s.points],
         group_id=s.group_id,
-        shape_type=s.shape_type,
         flags=s.flags,
       )
     )
@@ -1337,6 +1348,7 @@ class MainWindow(QtWidgets.QMainWindow):
         imageWidth=self.image.width(),
         otherData=self.otherData,
         flags=flags,
+        format=self.output_format,
       )
       self.labelFile = lf
       items = self.fileListWidget.findItems(
@@ -1509,6 +1521,31 @@ class MainWindow(QtWidgets.QMainWindow):
     for item in self.annotList:
       item.setCheckState(Qt.Checked if value else Qt.Unchecked)
 
+  def load_labelfile(self, label_file, filename):
+      try:
+        self.labelFile = LabelFile(label_file)
+      except LabelFileError as e:
+        self.errorMessage(
+          self.tr("Error opening file"),
+          self.tr(
+            "<p><b>%s</b></p>"
+            "<p>Make sure <i>%s</i> is a valid label file."
+          )
+          % (e, label_file),
+        )
+        self.status(self.tr("Error reading %s") % label_file)
+        return False
+      self.imageData = self.labelFile.imageData
+      if self.labelFile.imagePath:
+        self.imagePath = osp.join(
+          osp.dirname(label_file), self.labelFile.imagePath,
+        )
+      self.otherData = self.labelFile.otherData
+    
+      if self.labelFile.imageData is None:
+        self.imageData = LabelFile.load_image_file(filename)
+        if self.imageData:          self.imagePath = filename
+
   def loadFile(self, filename=None):
     """Load the specified file, or the last opened file if None."""
     # changing fileListWidget loads file
@@ -1536,32 +1573,15 @@ class MainWindow(QtWidgets.QMainWindow):
     if self.output_dir:
       label_file_without_path = osp.basename(label_file)
       label_file = osp.join(self.output_dir, label_file_without_path)
-    if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
-      label_file
-    ):
-      try:
-        self.labelFile = LabelFile(label_file)
-      except LabelFileError as e:
-        self.errorMessage(
-          self.tr("Error opening file"),
-          self.tr(
-            "<p><b>%s</b></p>"
-            "<p>Make sure <i>%s</i> is a valid label file."
-          )
-          % (e, label_file),
-        )
-        self.status(self.tr("Error reading %s") % label_file)
-        return False
-      self.imageData = self.labelFile.imageData
-      self.imagePath = osp.join(
-        osp.dirname(label_file), self.labelFile.imagePath,
-      )
-      self.otherData = self.labelFile.otherData
-    else:
-      self.imageData = LabelFile.load_image_file(filename)
-      if self.imageData:
-        self.imagePath = filename
-      self.labelFile = None
+    
+    if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
+      self.load_labelfile(label_file, filename)
+    elif all(QtCore.QFile.exists(osp.splitext(filename)[0] + geo_file_ext) for geo_file_ext in [".dbf", ".shp", ".shx"]):
+      dbf_file = geopandas.read_file(osp.splitext(filename)[0] + ".shp", encoding='cp949')
+      dbf_file.to_file(label_file, driver='GeoJSON')
+      self.load_labelfile(label_file, filename)
+
+      
     image = QtGui.QImage.fromData(self.imageData)
 
     if image.isNull():
@@ -1915,7 +1935,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.fileListWidget.repaint()
 
   def onChangeLanguage(self, _value=False):
-    languages = [self.tr(language) for language in self.support_language]
+    languages = [self.tr(language) for language in self.support_languages]
     language, ok = QtWidgets.QInputDialog.getItem(self, self.tr('Select display language'),
                                       self.tr('List of languages'),
                                       languages,
@@ -1933,9 +1953,164 @@ class MainWindow(QtWidgets.QMainWindow):
 
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + languages.index(language))
 
+  def onChangeOutputFormat(self, _value=False):
+    formats = [self.tr(format) for format in self.support_formats]
+    format, ok = QtWidgets.QInputDialog.getItem(self, self.tr('Select output format'),
+                                      self.tr('List of foramt'),
+                                      formats,
+                                       0, False)
+
+    if not ok and format:      return
+
+    self.output_format = format
+    self.statusBar().showMessage(
+      self.tr("%s - Annotations will be saved to the %s foramt")
+      % (__appname__, self.output_format)
+    )
+    self.statusBar().show()
+
   def onExportPixel(self):
     caption = self.tr("%s - Choose File") % __appname__
     filters = self.tr("Label files (*%s)") % LabelFile.suffix
+
+  def exportDetectionVOC(self, imageList, classes):
+    os.makedirs(osp.join(self.output_dir, "VOC"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "JPEGImages"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "Annotations"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "AnnotationsVisualization"))
+
+    for imagename in imageList:
+      base = osp.splitext(osp.basename(imagename))[0]
+      out_img_file = osp.join(self.output_dir, "VOC", "JPEGImages", base + ".jpg")
+      out_xml_file = osp.join(self.output_dir, "VOC", "Annotations", base + ".xml")
+      out_viz_file = osp.join(self.output_dir, "VOC", "AnnotationsVisualization", base + ".jpg")
+
+      label_file = osp.splitext(imagename)[0] + ".json"
+      labelFile = LabelFile(label_file)
+
+      img = utils.img_data_to_arr(labelFile.imageData)
+      imgviz.io.imsave(out_img_file, img)
+
+      maker = lxml.builder.ElementMaker()
+      xml = maker.annotation(
+        maker.folder(),
+        maker.filename(base + ".jpg"),
+        maker.database(),  # e.g., The VOC2007 Database
+        maker.annotation(),  # e.g., Pascal VOC2007
+        maker.image(),  # e.g., flickr
+        maker.size(
+          maker.height(str(img.shape[0])),
+          maker.width(str(img.shape[1])),
+          maker.depth(str(img.shape[2])),
+        ),
+        maker.segmented(),
+      )
+
+      bboxes = []
+      labels = []
+      captions = []
+      for annotation in labelFile.annotations:
+        class_name = annotation["label"]
+        class_id = classes[class_name]
+
+        (xmin, ymin), (xmax, ymax) = annotation["points"]
+        # swap if min is larger than max.
+        xmin, xmax = sorted([xmin, xmax])
+        ymin, ymax = sorted([ymin, ymax])
+
+        bboxes.append([ymin, xmin, ymax, xmax])
+        labels.append(class_id)
+        captions.append(class_name)
+
+        xml.append(
+          maker.object(
+            maker.name(annotation["label"]),
+            maker.pose(),
+            maker.truncated(),
+            maker.difficult(),
+            maker.bndbox(
+              maker.xmin(str(xmin)),
+              maker.ymin(str(ymin)),
+              maker.xmax(str(xmax)),
+              maker.ymax(str(ymax)),
+            ),
+          )
+        )
+
+      viz = imgviz.instances2rgb(
+        image=img,
+        labels=labels,
+        bboxes=bboxes,
+        captions=captions,
+        font_size=15,
+      )
+      imgviz.io.imsave(out_viz_file, viz)
+
+      with open(out_xml_file, "wb") as f:
+        f.write(lxml.etree.tostring(xml, pretty_print=True))
+
+  def exportSegmentationVOC(self, imageList, classes):
+    os.makedirs(osp.join(self.output_dir, "VOC"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "JPEGImages"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClass"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClassPNG"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClassVisualization"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObject"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObjectPNG"))
+    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObjectVisualization"))
+
+    class_names = list(classes.keys())
+    del class_names[0]
+    for imagename in imageList:
+      base = osp.splitext(osp.basename(imagename))[0]
+      out_img_file = osp.join(self.output_dir, "VOC", "JPEGImages", base + ".jpg")
+
+      out_cls_file = osp.join(self.output_dir, "VOC", "SegmentationClass", base + ".npy")
+      out_clsp_file = osp.join(self.output_dir, "VOC", "SegmentationClassPNG", base + ".png")
+      out_clsv_file = osp.join(self.output_dir, "VOC", "SegmentationClassVisualization", base + ".jpg")
+
+      out_ins_file = osp.join(self.output_dir, "VOC", "SegmentationObject", base + ".npy")
+      out_insp_file = osp.join(self.output_dir, "VOC", "SegmentationObjectPNG", base + ".png")
+      out_insv_file = osp.join(self.output_dir, "VOC", "SegmentationObjectVisualization", base + ".jpg")
+
+      label_file = osp.splitext(imagename)[0] + ".json"
+      labelFile = LabelFile(label_file)
+
+      img = utils.img_data_to_arr(labelFile.imageData)
+      imgviz.io.imsave(out_img_file, img)
+
+      cls, ins = utils.annotations_to_label(
+        img_shape=img.shape,
+        annotations=labelFile.annotations,
+        classes=classes,
+      )
+      ins[cls == -1] = 0  # ignore it.
+
+      # class label
+      utils.lblsave(out_clsp_file, cls)
+      np.save(out_cls_file, cls)
+      clsv = imgviz.label2rgb(
+        label=cls,
+        img=imgviz.rgb2gray(img),
+        label_names=class_names,
+        font_size=15,
+        loc="rb",
+      )
+      imgviz.io.imsave(out_clsv_file, clsv)
+
+      # instance label
+      utils.lblsave(out_insp_file, ins)
+      np.save(out_ins_file, ins)
+      instance_ids = np.unique(ins)
+      instance_names = [str(i) for i in range(max(instance_ids) + 1)]
+      insv = imgviz.label2rgb(
+        label=ins,
+        img=imgviz.rgb2gray(img),
+        label_names=instance_names,
+        font_size=15,
+        loc="rb",
+      )
+      imgviz.io.imsave(out_insv_file, insv)
 
   def onExportVOC(self):
     if not self.output_dir:   self.onChangeOutputDir()
@@ -1981,89 +2156,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
     print("Creating dataset VOC:", self.output_dir)
 
-    class_names = []
+    classes = {"__ignore__":-1, "_background_":0, }
     for annotation in annotations:
-      if not annotation["label"] in class_names:
-        class_names.append(annotation["label"])
-    class_names = tuple(class_names)
+      class_name = annotation["label"]
+      if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
+        classes[class_name] = len(classes)-1
 
     if osp.isdir(osp.join(self.output_dir, "VOC")):
       shutil.rmtree(osp.join(self.output_dir, "VOC"))
 
     if AnnotationType == "bbox_detection":
-      os.makedirs(osp.join(self.output_dir, "VOC"))
-      os.makedirs(osp.join(self.output_dir, "VOC", "JPEGImages"))
-      os.makedirs(osp.join(self.output_dir, "VOC", "Annotations"))
-      os.makedirs(osp.join(self.output_dir, "VOC", "AnnotationsVisualization"))
-
-      for imagename in imageList:
-        base = osp.splitext(osp.basename(imagename))[0]
-        out_img_file = osp.join(self.output_dir, "VOC", "JPEGImages", base + ".jpg")
-        out_xml_file = osp.join(self.output_dir, "VOC", "Annotations", base + ".xml")
-        out_viz_file = osp.join(self.output_dir, "VOC", "AnnotationsVisualization", base + ".jpg")
-
-        label_file = osp.splitext(imagename)[0] + ".json"
-        labelFile = LabelFile(label_file)
-
-        img = utils.img_data_to_arr(labelFile.imageData)
-        imgviz.io.imsave(out_img_file, img)
-
-        maker = lxml.builder.ElementMaker()
-        xml = maker.annotation(
-          maker.folder(),
-          maker.filename(base + ".jpg"),
-          maker.database(),  # e.g., The VOC2007 Database
-          maker.annotation(),  # e.g., Pascal VOC2007
-          maker.image(),  # e.g., flickr
-          maker.size(
-            maker.height(str(img.shape[0])),
-            maker.width(str(img.shape[1])),
-            maker.depth(str(img.shape[2])),
-          ),
-          maker.segmented(),
-        )
-
-        bboxes = []
-        labels = []
-        for annotation in labelFile.annotations:
-          class_name = annotation["label"]
-          class_id = class_names.index(class_name)
-
-          (xmin, ymin), (xmax, ymax) = annotation["points"]
-          # swap if min is larger than max.
-          xmin, xmax = sorted([xmin, xmax])
-          ymin, ymax = sorted([ymin, ymax])
-
-          bboxes.append([ymin, xmin, ymax, xmax])
-          labels.append(class_id)
-
-          xml.append(
-            maker.object(
-              maker.name(annotation["label"]),
-              maker.pose(),
-              maker.truncated(),
-              maker.difficult(),
-              maker.bndbox(
-                maker.xmin(str(xmin)),
-                maker.ymin(str(ymin)),
-                maker.xmax(str(xmax)),
-                maker.ymax(str(ymax)),
-              ),
-            )
-          )
-
-        captions = [class_names[label] for label in labels]
-        viz = imgviz.instances2rgb(
-          image=img,
-          labels=labels,
-          bboxes=bboxes,
-          captions=captions,
-          font_size=15,
-        )
-        imgviz.io.imsave(out_viz_file, viz)
-
-        with open(out_xml_file, "wb") as f:
-          f.write(lxml.etree.tostring(xml, pretty_print=True))
+      self.exportDetectionVOC(imageList, classes)
+    elif AnnotationType == "segmenation":
+      self.exportSegmentationVOC(imageList, classes)
 
 
   def onExportCOCO(self):

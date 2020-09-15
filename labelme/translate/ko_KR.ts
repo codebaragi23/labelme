@@ -14,8 +14,8 @@
     </message>
     <message>
         <location filename="../widgets/canvas.py" line="282"/>
-        <source>Click &amp; drag to move shape &apos;%s&apos;</source>
-        <translation>클릭 &amp; 드래그하여 모양 이동 &apos;%s&apos;</translation>
+        <source>Click &amp; drag to move annotation &apos;%s&apos;</source>
+        <translation>클릭 &amp; 드래그하여 주석 이동 &apos;%s&apos;</translation>
     </message>
 </context>
 <context>
@@ -246,6 +246,36 @@
         <translation>선 스트립 생성</translation>
     </message>
     <message>
+        <location filename="../app.py" line="378"/>
+        <source>Edit Annotations</source>
+        <translation>주석 편집</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="382"/>
+        <source>Move and edit the selected annotations</source>
+        <translation>선택한 주석 이동 및 편집</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="387"/>
+        <source>Delete Annotations</source>
+        <translation>주석 삭제</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="391"/>
+        <source>Delete the selected annotations</source>
+        <translation>선택한 주석 삭제</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="395"/>
+        <source>Duplicate Annotations</source>
+        <translation>주석 복제</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="399"/>
+        <source>Create a duplicate of the selected annotations</source>
+        <translation>선택한 주석 복제 생성</translation>
+    </message>
+    <message>
         <location filename="../app.py" line="357"/>
         <source>Start drawing linestrip (Ctrl+LeftClick ends creation)</source>
         <translation>선 스트림 그리기 (Ctrl+LeftClick 눌러 종료)</translation>
@@ -471,6 +501,11 @@
         <translation>편집(&amp;E)</translation>
     </message>
     <message>
+        <location filename="../app.py" line="709"/>
+        <source>&amp;Dataset</source>
+        <translation>데이터셋(&amp;E)</translation>
+    </message>
+    <message>
         <location filename="../app.py" line="640"/>
         <source>&amp;View</source>
         <translation>보기(&amp;V)</translation>
@@ -615,6 +650,18 @@
         <source>You are about to restart to change the language, proceed anyway?</source>
         <translation>언어 변경을 위해 다시 시작하려고 합니다. 계속 하시겠습니까?</translation>
     </message>
+    <message>
+        <location filename="../app.py" line="1946"/>
+        <source>Select output format</source>
+        <translation>출력 포맷 선택</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="1947"/>
+        <source>List of foramt</source>
+        <translation>포맷 목록</translation>
+    </message>
+
+    
     <message>
         <location filename="../app.py" line="1761"/>
         <source>Choose File</source>
