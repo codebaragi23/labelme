@@ -1201,10 +1201,11 @@ class MainWindow(QtWidgets.QMainWindow):
     if not self.mayContinue():
       return
 
-    currIndex = self.imageList.index(str(item.text()))
-    if currIndex < len(self.imageList):
-      filename = self.imageList[currIndex]
-      if filename:
+    filelist = [osp.basename(full) for full in self.imageList]
+    if item.text() in filelist:
+      currIndex = filelist.index(item.text())
+      if currIndex < len(self.imageList):
+        filename = self.imageList[currIndex]
         self.loadFile(filename)
 
   # React to canvas signals.
@@ -1678,8 +1679,12 @@ class MainWindow(QtWidgets.QMainWindow):
     flags = {k: False for k in self._config["flags"] or []}
     if self.labelFile:
       self.loadLabels(self.labelFile.annotations)
-      if self.labelFile.flags is not None:
+      if len(self.labelFile.flags) > 0:
         flags.update(self.labelFile.flags)
+        self.flag_dock.raise_()
+      else:
+        self.label_dock.raise_()
+
     self.loadFlags(flags)
     if self._config["keep_prev"] and self.noAnnotations():
       self.loadAnnotations(prev_annotations, replace=False)
@@ -2543,7 +2548,7 @@ class MainWindow(QtWidgets.QMainWindow):
     lst = []
     for i in range(self.fileListWidget.count()):
       item = self.fileListWidget.item(i)
-      lst.append(item.text())
+      lst.append(osp.join(self.lastOpenDir, item.text()))
     return lst
 
   def importDroppedImageFiles(self, imageFiles):
@@ -2595,7 +2600,7 @@ class MainWindow(QtWidgets.QMainWindow):
       if self.output_dir:
         label_file_without_path = osp.basename(label_file)
         label_file = osp.join(self.output_dir, label_file_without_path)
-      item = QtWidgets.QListWidgetItem(filename)
+      item = QtWidgets.QListWidgetItem(osp.basename(filename))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
       if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
         label_file
