@@ -1178,14 +1178,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     rgb = self._get_rgb_by_label(annotation.label)
     r, g, b = rgb
-    
     item = self.annotList.findItemByAnnotation(annotation)
     item.setText(
       '{} <font color="#{:02x}{:02x}{:02x}">●</font>'.format(
         text, r, g, b
       )
     )
-
     annotation.setColor(rgb)
     self.setDirty()
 
