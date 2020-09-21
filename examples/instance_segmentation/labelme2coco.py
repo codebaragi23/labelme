@@ -26,9 +26,9 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument("input_dir", help="input annotated directory")
-    parser.add_argument("output_dir", help="output dataset directory")
-    parser.add_argument("--labels", help="labels file", required=True)
+    parser.add_argument("--input_dir", default="./examples/instance_segmentation/data_annotated", help="input annotated directory")
+    parser.add_argument("--output_dir", default="./examples/instance_segmentation/coco", help="output dataset directory")
+    parser.add_argument("--labels", default="./examples/instance_segmentation/labels.txt", help="labels file")
     parser.add_argument(
         "--noviz", help="no visualization", action="store_true"
     )
@@ -81,6 +81,7 @@ def main():
 
     out_ann_file = osp.join(args.output_dir, "annotations.json")
     label_files = glob.glob(osp.join(args.input_dir, "*.json"))
+    label_files = sorted(label_files)
     for image_id, filename in enumerate(label_files):
         print("Generating dataset from:", filename)
 
@@ -105,11 +106,11 @@ def main():
 
         masks = {}  # for area
         segmentations = collections.defaultdict(list)  # for segmentation
-        for shape in label_file.shapes:
-            points = shape["points"]
-            label = shape["label"]
-            group_id = shape.get("group_id")
-            shape_type = shape.get("shape_type", "polygon")
+        for annotation in label_file.annotations:
+            points = annotation["points"]
+            label = annotation["label"]
+            group_id = annotation.get("group_id")
+            shape_type = annotation.get("shape_type", "polygon")
             mask = labelme.utils.shape_to_mask(
                 img.shape[:2], points, shape_type
             )

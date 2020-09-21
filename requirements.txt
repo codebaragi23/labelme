@@ -11,10 +11,13 @@ termcolor
 tifffile
 imagecodecs
 lxml
+
+# Geo ----------------------------------------
 geopandas
+pygeos
 
 # coco ----------------------------------------
-# pycocotools>=2.0
+pycocotools>=2.0
 
 # export --------------------------------------
 # coremltools==4.0b2

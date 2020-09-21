@@ -8,14 +8,23 @@ import shutil
 import re
 import webbrowser
 import numpy as np
+
 import geopandas
+import collections
+import datetime
+import uuid
+import json
+
+import pycocotools.mask as cocomask
 
 import lxml.builder
 import lxml.etree
 
 import imgviz
+from PIL import Image, ImageEnhance
 from qtpy import QtCore
 from qtpy.QtCore import Qt
+from qtpy.QtCore import Slot
 from qtpy import QtGui
 from qtpy import QtWidgets
 
@@ -26,10 +35,11 @@ from labelme import QT5
 from . import utils
 from labelme.config import get_config
 from labelme.label_file import LabelFile
+from labelme.label_file import LabelFileFromGeo
 from labelme.label_file import LabelFileError
 from labelme.logger import logger
 from labelme.annotation import Annotation
-from labelme.widgets import BrightnessContrastDialog
+from labelme.widgets import AppearanceWidget
 from labelme.widgets import Canvas
 from labelme.widgets import LabelDialog
 from labelme.widgets import AnnotationListWidget
@@ -37,7 +47,6 @@ from labelme.widgets import AnnotationListWidgetItem
 from labelme.widgets import ToolBar
 from labelme.widgets import LabelQListWidget
 from labelme.widgets import ZoomWidget
-
 
 # FIXME
 # - [medium] Set max zoom value to something big enough for FitWidth/Window
@@ -76,8 +85,6 @@ class MainWindow(QtWidgets.QMainWindow):
       config = get_config()
     self._config = config
     self.support_languages = support_languages
-    self.support_formats = ["simple", "GeoJSON"]
-    self.output_format = self._config["label_format"]
 
     # set default annotation colors
     Annotation.line_color = QtGui.QColor(*self._config["annotation"]["line_color"])
@@ -114,6 +121,8 @@ class MainWindow(QtWidgets.QMainWindow):
       flags=self._config["label_flags"],
     )
 
+    self.lastOpenDir = None
+
     self.fileSearch = QtWidgets.QLineEdit()
     self.fileSearch.setPlaceholderText(self.tr("Search Filename"))
     self.fileSearch.textChanged.connect(self.fileSearchChanged)
@@ -126,14 +135,19 @@ class MainWindow(QtWidgets.QMainWindow):
     fileListLayout.setSpacing(0)
     fileListLayout.addWidget(self.fileSearch)
     fileListLayout.addWidget(self.fileListWidget)
-    self.file_dock = QtWidgets.QDockWidget(self.tr(u"File List"), self)
-    self.file_dock.setObjectName(u"Files")
     fileListWidget = QtWidgets.QWidget()
     fileListWidget.setLayout(fileListLayout)
+    self.file_dock = QtWidgets.QDockWidget(self.tr(u"File List"), self)
+    self.file_dock.setObjectName(u"Files")
     self.file_dock.setWidget(fileListWidget)
 
-    self.lastOpenDir = None
+    self.appe_dock = QtWidgets.QDockWidget(self.tr(u"Appearance"), self)
+    self.appe_dock.setObjectName(u"Appearance")
 
+    self.appearance_widget = AppearanceWidget(self.onNewBrightnessContrast)
+    self.appearance_widget.setEnabled(False)
+    self.appe_dock.setWidget(self.appearance_widget)
+    
     self.flag_dock = self.flag_widget = None
     self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
     self.flag_dock.setObjectName("Flags")
@@ -156,18 +170,31 @@ class MainWindow(QtWidgets.QMainWindow):
         self.labelList.addItem(item)
         rgb = self._get_rgb_by_label(label)
         self.labelList.setItemLabel(item, label, rgb)
-    self.label_dock = QtWidgets.QDockWidget(self.tr(u"Label List"), self)
-    self.label_dock.setObjectName(u"Label List")
-    self.label_dock.setWidget(self.labelList)
 
     self.annotList = AnnotationListWidget()
     self.annotList.itemSelectionChanged.connect(self.annotSelectionChanged)
-    self.annotList.itemDoubleClicked.connect(self.editAnnot)
+    self.annotList.itemDoubleClicked.connect(self.editLabel)
     self.annotList.itemChanged.connect(self.annotItemChanged)
     self.annotList.itemDropped.connect(self.annotOrderChanged)
-    self.annot_dock = QtWidgets.QDockWidget(self.tr("Annotation List"), self)
-    self.annot_dock.setObjectName(u"Annotations")
-    self.annot_dock.setWidget(self.annotList)
+
+    labelListSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+    labelListSplitter.addWidget(utils.addTitle(self.labelList, self.tr("Labels")))
+    labelListSplitter.addWidget(utils.addTitle(self.annotList, self.tr("Annotations")))
+    labelListSplitter.setCollapsible(0, False)
+    labelListSplitter.setCollapsible(1, False)
+    labelListSplitter.setStretchFactor(0, 3)
+    labelListSplitter.setStretchFactor(1, 7)
+    labelListSplitter.setHandleWidth(7)
+
+    labelListLayout = QtWidgets.QVBoxLayout()
+    labelListLayout.setContentsMargins(0, 0, 0, 0)
+    labelListLayout.addWidget(labelListSplitter)
+
+    labelListWidget = QtWidgets.QWidget()
+    labelListWidget.setLayout(labelListLayout)
+    self.label_dock = QtWidgets.QDockWidget(self.tr("Label List"), self)
+    self.label_dock.setObjectName(u"Labels")
+    self.label_dock.setWidget(labelListWidget)
 
     self.zoomWidget = ZoomWidget()
     self.setAcceptDrops(True)
@@ -195,7 +222,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.setCentralWidget(scrollArea)
 
     features = QtWidgets.QDockWidget.DockWidgetFeatures()
-    for dock in ["file_dock", "flag_dock", "label_dock", "annot_dock"]:
+    #for dock in ["file_dock", "flag_dock", "label_dock", "annot_dock"]:
+    for dock in ["file_dock", "flag_dock", "label_dock"]:
       if self._config[dock]["closable"]:
         features = features | QtWidgets.QDockWidget.DockWidgetClosable
       if self._config[dock]["floatable"]:
@@ -206,10 +234,12 @@ class MainWindow(QtWidgets.QMainWindow):
       if self._config[dock]["show"] is False:
         getattr(self, dock).setVisible(False)
 
+    self.setTabPosition(Qt.RightDockWidgetArea, QtWidgets.QTabWidget.North)
     self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
-    self.addDockWidget(Qt.RightDockWidgetArea, self.flag_dock)
+    self.addDockWidget(Qt.LeftDockWidgetArea, self.appe_dock)
     self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
-    self.addDockWidget(Qt.RightDockWidgetArea, self.annot_dock)
+    self.tabifyDockWidget(self.label_dock, self.flag_dock)
+    self.label_dock.raise_()
 
     # Actions
     action = functools.partial(utils.newAction, self)
@@ -308,13 +338,6 @@ class MainWindow(QtWidgets.QMainWindow):
       slot=self.onChangeLanguage,
       icon="translate",
       tip=self.tr(u"Change display language"),
-    )
-
-    changeOutputFormat = action(
-      self.tr("Change &Format"),
-      slot=self.onChangeOutputFormat,
-      icon="save",
-      tip=self.tr(u"Change output foramt"),
     )
 
     close = action(
@@ -549,7 +572,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     edit = action(
       self.tr("&Edit Label"),
-      self.editAnnot,
+      self.editLabel,
       shortcuts["edit_label"],
       "edit",
       self.tr("Modify the label of the selected polygon"),
@@ -568,10 +591,11 @@ class MainWindow(QtWidgets.QMainWindow):
     fill_drawing.trigger()
 
     exportPixel = action(
-      "Pixel",
-      slot=self.onExportPixel,
+      "Pixel Map",
+      slot=self.onExportPixelMap,
       icon="export",
       tip=self.tr("Export pixel labeling"),
+      enabled=False,
     )
 
     exportVOC = action(
@@ -579,6 +603,7 @@ class MainWindow(QtWidgets.QMainWindow):
       slot=self.onExportVOC,
       icon="export",
       tip=self.tr("Export VOC dataset format"),
+      enabled=False,
     )
 
     exportCOCO = action(
@@ -586,30 +611,8 @@ class MainWindow(QtWidgets.QMainWindow):
       slot=self.onExportCOCO,
       icon="export",
       tip=self.tr("Export COCO dataset format"),
+      enabled=False,
     )
-
-    importPixel = action(
-      "Pixel",
-      slot=self.onImportPixel,
-      icon="import",
-      tip=self.tr("Import pixel labeling"),
-    )
-
-    importVOC = action(
-      "VOC",
-      slot=self.onImportVOC,
-      icon="import",
-      tip=self.tr("Import VOC dataset format"),
-    )
-
-    importCOCO = action(
-      "COCO",
-      slot=self.onImportCOCO,
-      icon="import",
-      tip=self.tr("Import COCO dataset format"),
-    )
-
-    #self.actions.exportPixel.setEnabled(True)
 
     # Lavel list context menu.
     labelMenu = QtWidgets.QMenu()
@@ -698,15 +701,13 @@ class MainWindow(QtWidgets.QMainWindow):
         brightnessContrast,
       ),
       onAnnotationsPresent=(saveAs, hideAll, showAll),
-      exportMenu=(
+      exportDetectMenu=(
+        exportVOC,
+      ),
+      exportSegMenu=(
         exportPixel,
         exportVOC,
         exportCOCO,
-      ),
-      importMenu=(
-        importPixel,
-        importVOC,
-        importCOCO,
       ),
     )
 
@@ -722,7 +723,6 @@ class MainWindow(QtWidgets.QMainWindow):
       recentFiles=QtWidgets.QMenu(self.tr("Open &Recent")),
       preferences=QtWidgets.QMenu(self.tr("&Preferences")),
       export_=QtWidgets.QMenu(self.tr("&Export")),
-      import_=QtWidgets.QMenu(self.tr("&Import")),
       labelList=labelMenu,
     )
     
@@ -754,7 +754,6 @@ class MainWindow(QtWidgets.QMainWindow):
       (
         changeOutputDir,
         changeLanguage,
-        changeOutputFormat,
       ),
     )
 
@@ -762,7 +761,6 @@ class MainWindow(QtWidgets.QMainWindow):
       self.menus.data,
       (
         self.menus.export_,
-        self.menus.import_,
       ),
     )
 
@@ -774,22 +772,14 @@ class MainWindow(QtWidgets.QMainWindow):
         exportCOCO,
       ),
     )
-
-    utils.addActions(
-      self.menus.import_,
-      (
-        importPixel,
-        importVOC,
-        importCOCO,
-      ),
-    )
+    self.menus.export_.setEnabled(False)
 
     utils.addActions(
       self.menus.view,
       (
         self.flag_dock.toggleViewAction(),
         self.label_dock.toggleViewAction(),
-        self.annot_dock.toggleViewAction(),
+        #self.annot_dock.toggleViewAction(),
         self.file_dock.toggleViewAction(),
         None,
         fill_drawing,
@@ -880,7 +870,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # XXX: Could be completely declarative.
     # Restore application settings.
+
+    # /$HOME/.config/labelme
     self.settings = QtCore.QSettings("labelme", "labelme")
+
     # FIXME: QSettings.value can return None on PyQt4
     self.recentFiles = self.settings.value("recentFiles", []) or []
     size = self.settings.value("window/size", QtCore.QSize(600, 500))
@@ -979,8 +972,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     if self.hasLabelFile():
       self.actions.deleteFile.setEnabled(True)
+      self.menus.export_.setEnabled(True)
     else:
       self.actions.deleteFile.setEnabled(False)
+      self.menus.export_.setEnabled(False)
 
   def toggleActions(self, value=True):
     """Enable/Disable widgets which depend on an opened image."""
@@ -1063,6 +1058,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.createLineMode.setEnabled(True)
         self.actions.createPointMode.setEnabled(True)
         self.actions.createLineStripMode.setEnabled(True)
+        for action in self.actions.exportSegMenu:
+          action.setEnabled(True)
       elif createMode == "rectangle":
         self.actions.createMode.setEnabled(True)
         self.actions.createRectangleMode.setEnabled(False)
@@ -1070,6 +1067,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.createLineMode.setEnabled(True)
         self.actions.createPointMode.setEnabled(True)
         self.actions.createLineStripMode.setEnabled(True)
+        for action in self.actions.exportDetectMenu:
+          action.setEnabled(True)
       elif createMode == "line":
         self.actions.createMode.setEnabled(True)
         self.actions.createRectangleMode.setEnabled(True)
@@ -1091,6 +1090,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.createLineMode.setEnabled(True)
         self.actions.createPointMode.setEnabled(True)
         self.actions.createLineStripMode.setEnabled(True)
+        for action in self.actions.exportDetectMenu:
+          action.setEnabled(True)
       elif createMode == "linestrip":
         self.actions.createMode.setEnabled(True)
         self.actions.createRectangleMode.setEnabled(True)
@@ -1137,7 +1138,7 @@ class MainWindow(QtWidgets.QMainWindow):
           return True
     return False
 
-  def editAnnot(self, item=None):
+  def editLabel(self, item=None):
     if item and not isinstance(item, AnnotationListWidgetItem):
       raise TypeError("item must be AnnotationListWidgetItem type")
 
@@ -1170,11 +1171,23 @@ class MainWindow(QtWidgets.QMainWindow):
       item.setText(annotation.label)
     else:
       item.setText("{} ({})".format(annotation.label, annotation.group_id))
-    self.setDirty()
     if not self.labelList.findItemsByLabel(annotation.label):
       item = QtWidgets.QListWidgetItem()
       item.setData(Qt.UserRole, annotation.label)
       self.labelList.addItem(item)
+
+    rgb = self._get_rgb_by_label(annotation.label)
+    r, g, b = rgb
+    
+    item = self.annotList.findItemByAnnotation(annotation)
+    item.setText(
+      '{} <font color="#{:02x}{:02x}{:02x}">●</font>'.format(
+        text, r, g, b
+      )
+    )
+
+    annotation.setColor(rgb)
+    self.setDirty()
 
   def fileSearchChanged(self):
     self.importDirImages(
@@ -1238,12 +1251,7 @@ class MainWindow(QtWidgets.QMainWindow):
         text, r, g, b
       )
     )
-    annotation.line_color = QtGui.QColor(r, g, b)
-    annotation.vertex_fill_color = QtGui.QColor(r, g, b)
-    annotation.hvertex_fill_color = QtGui.QColor(255, 255, 255)
-    annotation.fill_color = QtGui.QColor(r, g, b, 128)
-    annotation.select_line_color = QtGui.QColor(255, 255, 255)
-    annotation.select_fill_color = QtGui.QColor(r, g, b, 155)
+    annotation.setColor(rgb)
 
   def _get_rgb_by_label(self, label):
     if self._config["annotation_color"] == "auto":
@@ -1348,7 +1356,6 @@ class MainWindow(QtWidgets.QMainWindow):
         imageWidth=self.image.width(),
         otherData=self.otherData,
         flags=flags,
-        format=self.output_format,
       )
       self.labelFile = lf
       items = self.fileListWidget.findItems(
@@ -1493,37 +1500,87 @@ class MainWindow(QtWidgets.QMainWindow):
     self.zoomMode = self.FIT_WIDTH if value else self.MANUAL_ZOOM
     self.adjustScale()
 
-  def onNewBrightnessContrast(self, qimage):
+  def onNewBrightnessContrast(self, brightness, contrast):
+    self.brightnessContrast_values[self.filename] = (brightness, contrast)
+    img = utils.img_data_to_pil(self.imageData)
+    img = ImageEnhance.Brightness(img).enhance(brightness)
+    img = ImageEnhance.Contrast(img).enhance(contrast)
+    img_data = utils.img_pil_to_data(img)
+
+    qimage = QtGui.QImage.fromData(img_data)
     self.canvas.loadPixmap(
       QtGui.QPixmap.fromImage(qimage), clear_annotations=False
     )
 
   def brightnessContrast(self, value):
-    dialog = BrightnessContrastDialog(
-      utils.img_data_to_pil(self.imageData),
-      self.onNewBrightnessContrast,
-      parent=self,
-    )
+    dialog = QtWidgets.QDialog(parent=self)
+    widget = AppearanceWidget()
     brightness, contrast = self.brightnessContrast_values.get(
       self.filename, (None, None)
     )
     if brightness is not None:
-      dialog.slider_brightness.setValue(brightness)
+      widget.slider_brightness.setValue(brightness)
     if contrast is not None:
-      dialog.slider_contrast.setValue(contrast)
+      widget.slider_contrast.setValue(contrast)
+
+    layout = QtWidgets.QVBoxLayout()
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(widget)
+
+    widget.slider_brightness.valueChanged.disconnect()
+    widget.slider_contrast.valueChanged.disconnect()
+
+    widget.slider_brightness.valueChanged.connect(self.appearance_widget.slider_brightness.setValue)
+    widget.slider_contrast.valueChanged.connect(self.appearance_widget.slider_contrast.setValue)
+
+    dialog.setWindowTitle(self.tr("Brightness/Contrast"))
+    dialog.setLayout(layout)
+    dialog.setModal(True)
     dialog.exec_()
 
-    brightness = dialog.slider_brightness.value()
-    contrast = dialog.slider_contrast.value()
+    brightness = widget.slider_brightness.value()
+    contrast = widget.slider_contrast.value()
     self.brightnessContrast_values[self.filename] = (brightness, contrast)
 
   def togglePolygons(self, value):
     for item in self.annotList:
       item.setCheckState(Qt.Checked if value else Qt.Unchecked)
 
-  def load_labelfile(self, label_file, filename):
+  def load_labelfile(self, imagename):
+    label_file = self.getLabelFile(imagename)
+
+    try:
+      labelFile = LabelFile(label_file)
+    except LabelFileError as e:
+      self.errorMessage(
+        self.tr("Error opening file"),
+        self.tr(
+          "<p><b>%s</b></p>"
+          "<p>Make sure <i>%s</i> is a valid label file."
+        )
+        % (e, label_file),
+      )
+      self.status(self.tr("Error reading %s") % label_file)
+      return False
+    
+    if labelFile.imagePath:
+      imagePath = osp.join(
+        osp.dirname(label_file), labelFile.imagePath,
+      )
+  
+    if labelFile.imageData is None:
+      labelFile.imageData = LabelFile.load_image_file(imagename)
+      imagePath = imagename
+    
+    return labelFile, imagePath
+
+  def getAllAnnotations(self, imageList):
+    annotations = []
+    for imagename in imageList:
+      label_file = osp.splitext(imagename)[0] + ".json"
+      labelFile = None
       try:
-        self.labelFile = LabelFile(label_file)
+        labelFile = LabelFile(label_file)
       except LabelFileError as e:
         self.errorMessage(
           self.tr("Error opening file"),
@@ -1535,16 +1592,8 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         self.status(self.tr("Error reading %s") % label_file)
         return False
-      self.imageData = self.labelFile.imageData
-      if self.labelFile.imagePath:
-        self.imagePath = osp.join(
-          osp.dirname(label_file), self.labelFile.imagePath,
-        )
-      self.otherData = self.labelFile.otherData
-    
-      if self.labelFile.imageData is None:
-        self.imageData = LabelFile.load_image_file(filename)
-        if self.imageData:          self.imagePath = filename
+      annotations.extend(labelFile.annotations)
+    return annotations
 
   def loadFile(self, filename=None):
     """Load the specified file, or the last opened file if None."""
@@ -1569,19 +1618,44 @@ class MainWindow(QtWidgets.QMainWindow):
       return False
     # assumes same name, but json extension
     self.status(self.tr("Loading %s...") % osp.basename(str(filename)))
-    label_file = osp.splitext(filename)[0] + ".json"
+    label_file = self.getLabelFile(filename)
     if self.output_dir:
       label_file_without_path = osp.basename(label_file)
       label_file = osp.join(self.output_dir, label_file_without_path)
     
+    geolabel = False
     if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
-      self.load_labelfile(label_file, filename)
+      self.labelFile, self.imagePath = self.load_labelfile(filename)
     elif all(QtCore.QFile.exists(osp.splitext(filename)[0] + geo_file_ext) for geo_file_ext in [".dbf", ".shp", ".shx"]):
       dbf_file = geopandas.read_file(osp.splitext(filename)[0] + ".shp", encoding='cp949')
-      dbf_file.to_file(label_file, driver='GeoJSON')
-      self.load_labelfile(label_file, filename)
+      geo = dbf_file._to_geo(na="null", show_bbox=False)
+      #TODEBUG
+      #dbf_file.to_file(label_file.replace(".json", ".geojson"), driver='GeoJSON')
+      self.labelFile = LabelFileFromGeo(geo)
+      self.labelFile.imageData = LabelFile.load_image_file(filename)
+      self.labelFile.filename = label_file
+      self.labelFile.imagePath = filename
+      self.imagePath = filename
+      geolabel = True
+    else:
+      self.imageData = LabelFile.load_image_file(filename)
+      self.imagePath = filename
 
-      
+    if self.labelFile:
+      self.imageData = self.labelFile.imageData
+      self.otherData = self.labelFile.otherData
+      imageList = [self.imagePath]
+      if len(self.imageList) > 0:      imageList = self.imageList
+      annotations = self.labelFile.annotations
+      # bbox detection
+      if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+        for action in self.actions.exportDetectMenu:
+          action.setEnabled(True)
+      # segmentation
+      elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
+        for action in self.actions.exportSegMenu:
+          action.setEnabled(True)
+
     image = QtGui.QImage.fromData(self.imageData)
 
     if image.isNull():
@@ -1612,9 +1686,18 @@ class MainWindow(QtWidgets.QMainWindow):
     if self._config["keep_prev"] and self.noAnnotations():
       self.loadAnnotations(prev_annotations, replace=False)
       self.setDirty()
+    elif geolabel:
+      self.setDirty()
     else:
       self.setClean()
     self.canvas.setEnabled(True)
+
+    if len(self.canvas.annotations) > 0:
+      self.menus.export_.setEnabled(True)
+
+    self.appearance_widget.setAnnotations(self.canvas.annotations)
+    self.appearance_widget.setEnabled(True)
+
     # set zoom values
     is_initial_load = not self.zoom_values
     if self.filename in self.zoom_values:
@@ -1629,11 +1712,7 @@ class MainWindow(QtWidgets.QMainWindow):
           orientation, self.scroll_values[orientation][self.filename]
         )
     # set brightness constrast values
-    dialog = BrightnessContrastDialog(
-      utils.img_data_to_pil(self.imageData),
-      self.onNewBrightnessContrast,
-      parent=self,
-    )
+    widget = AppearanceWidget(self.onNewBrightnessContrast)
     brightness, contrast = self.brightnessContrast_values.get(
       self.filename, (None, None)
     )
@@ -1646,12 +1725,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.recentFiles[0], (None, None)
       )
     if brightness is not None:
-      dialog.slider_brightness.setValue(brightness)
+      widget.slider_brightness.setValue(brightness)
     if contrast is not None:
-      dialog.slider_contrast.setValue(contrast)
+      widget.slider_contrast.setValue(contrast)
     self.brightnessContrast_values[self.filename] = (brightness, contrast)
     if brightness is not None or contrast is not None:
-      dialog.onNewValue(None)
+      widget.onNewValue(None)
     self.paintCanvas()
     self.addRecentFile(self.filename)
     self.toggleActions(True)
@@ -1841,17 +1920,17 @@ class MainWindow(QtWidgets.QMainWindow):
     dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog, False)
     basename = osp.basename(osp.splitext(self.filename)[0])
     if self.output_dir:
-      default_labelfile_name = osp.join(
+      default_label_file = osp.join(
         self.output_dir, basename + LabelFile.suffix
       )
     else:
-      default_labelfile_name = osp.join(
+      default_label_file = osp.join(
         self.currentPath(), basename + LabelFile.suffix
       )
     filename = dlg.getSaveFileName(
       self,
       self.tr("Choose File"),
-      default_labelfile_name,
+      default_label_file,
       self.tr("Label files (*%s)") % LabelFile.suffix,
     )
     if isinstance(filename, tuple):
@@ -1872,12 +1951,11 @@ class MainWindow(QtWidgets.QMainWindow):
     self.canvas.setEnabled(False)
     self.actions.saveAs.setEnabled(False)
 
-  def getLabelFile(self):
-    if self.filename.lower().endswith(".json"):
-      label_file = self.filename
+  def getLabelFile(self, filename):
+    if filename.lower().endswith(".json"):
+      label_file = filename
     else:
-      label_file = osp.splitext(self.filename)[0] + ".json"
-
+      label_file = osp.splitext(filename)[0] + ".json"
     return label_file
 
   def deleteFile(self):
@@ -1889,7 +1967,7 @@ class MainWindow(QtWidgets.QMainWindow):
     answer = mb.warning(self, self.tr("Attention"), msg, mb.Yes | mb.No)
     if not answer == mb.Yes:      return
 
-    label_file = self.getLabelFile()
+    label_file = self.getLabelFile(self.filename)
     if osp.exists(label_file):
       os.remove(label_file)
       logger.info("Label file is removed: {}".format(label_file))
@@ -1899,6 +1977,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
       self.resetState()
 
+  @Slot()
   def onChangeOutputDir(self, _value=False):
     default_output_dir = self.output_dir
     if default_output_dir is None and self.filename:
@@ -1934,7 +2013,8 @@ class MainWindow(QtWidgets.QMainWindow):
       )
       self.fileListWidget.repaint()
 
-  def onChangeLanguage(self, _value=False):
+  @Slot()
+  def onChangeLanguage(self):
     languages = [self.tr(language) for language in self.support_languages]
     language, ok = QtWidgets.QInputDialog.getItem(self, self.tr('Select display language'),
                                       self.tr('List of languages'),
@@ -1953,25 +2033,63 @@ class MainWindow(QtWidgets.QMainWindow):
 
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + languages.index(language))
 
-  def onChangeOutputFormat(self, _value=False):
-    formats = [self.tr(format) for format in self.support_formats]
-    format, ok = QtWidgets.QInputDialog.getItem(self, self.tr('Select output format'),
-                                      self.tr('List of foramt'),
-                                      formats,
-                                       0, False)
+  @Slot()
+  def onExportPixelMap(self):
+    if not self.output_dir:   self.onChangeOutputDir()
+    if not self.output_dir:   return False
 
-    if not ok and format:      return
+    imageList = [self.imagePath]
+    if len(self.imageList) > 0:
+      mb = QtWidgets.QMessageBox
+      msg = self.tr('File List exists. Do you want to export all files?')
+      answer = mb.question(
+        self,
+        self.tr("Export all files"),
+        msg,
+        mb.Ok | mb.Cancel,
+        mb.Ok,
+      )
+      if answer == mb.Ok:        imageList = self.imageList
+    
+    AnnotationType = ""
+    annotations = self.getAllAnnotations(imageList)
+    # bbox detection
+    if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+      return False
+    
+    print("Creating pixel map:", self.output_dir)
+    classes = {"__ignore__":-1, "_background_":0, }
+    for annotation in annotations:
+      class_name = annotation["label"]
+      if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
+        classes[class_name] = len(classes)-1
 
-    self.output_format = format
-    self.statusBar().showMessage(
-      self.tr("%s - Annotations will be saved to the %s foramt")
-      % (__appname__, self.output_format)
-    )
-    self.statusBar().show()
+    class_names = list(classes.keys())
+    del class_names[0]
 
-  def onExportPixel(self):
-    caption = self.tr("%s - Choose File") % __appname__
-    filters = self.tr("Label files (*%s)") % LabelFile.suffix
+    if osp.isdir(osp.join(self.output_dir, "PixelMap")):
+      shutil.rmtree(osp.join(self.output_dir, "PixelMap"))
+    
+    os.makedirs(osp.join(self.output_dir, "PixelMap"))
+    for imagename in imageList:
+      base = osp.splitext(osp.basename(imagename))[0]
+      out_img_file = osp.join(self.output_dir, "PixelMap", base + ".png")
+
+      label_file = osp.splitext(imagename)[0] + ".json"
+      labelFile = LabelFile(label_file)
+      if labelFile.imageData is None:
+        labelFile.imageData = LabelFile.load_image_file(imagename)
+
+      img = utils.img_data_to_arr(labelFile.imageData)
+      cls, ins = utils.annotations_to_label(
+        img_shape=img.shape,
+        annotations=labelFile.annotations,
+        classes=classes,
+      )
+      ins[cls == -1] = 0  # ignore it.
+
+      # class label
+      utils.lblsave(out_img_file, cls)
 
   def exportDetectionVOC(self, imageList, classes):
     os.makedirs(osp.join(self.output_dir, "VOC"))
@@ -1987,6 +2105,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
       label_file = osp.splitext(imagename)[0] + ".json"
       labelFile = LabelFile(label_file)
+      if labelFile.imageData is None:
+        labelFile.imageData = LabelFile.load_image_file(imagename)
 
       img = utils.img_data_to_arr(labelFile.imageData)
       imgviz.io.imsave(out_img_file, img)
@@ -2075,6 +2195,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
       label_file = osp.splitext(imagename)[0] + ".json"
       labelFile = LabelFile(label_file)
+      if labelFile.imageData is None:
+        labelFile.imageData = LabelFile.load_image_file(imagename)
 
       img = utils.img_data_to_arr(labelFile.imageData)
       imgviz.io.imsave(out_img_file, img)
@@ -2112,8 +2234,10 @@ class MainWindow(QtWidgets.QMainWindow):
       )
       imgviz.io.imsave(out_insv_file, insv)
 
+  @Slot()
   def onExportVOC(self):
     if not self.output_dir:   self.onChangeOutputDir()
+    if not self.output_dir:   return False
 
     imageList = [self.imagePath]
     if len(self.imageList) > 0:
@@ -2129,33 +2253,15 @@ class MainWindow(QtWidgets.QMainWindow):
       if answer == mb.Ok:        imageList = self.imageList
     
     AnnotationType = ""
-    annotations = []
-    for imagename in imageList:
-      label_file = osp.splitext(imagename)[0] + ".json"
-      labelFile = None
-      try:
-        labelFile = LabelFile(label_file)
-      except LabelFileError as e:
-        self.errorMessage(
-          self.tr("Error opening file"),
-          self.tr(
-            "<p><b>%s</b></p>"
-            "<p>Make sure <i>%s</i> is a valid label file."
-          )
-          % (e, label_file),
-        )
-        self.status(self.tr("Error reading %s") % label_file)
-        return False
-
-      annotations.extend(labelFile.annotations)
-    
+    annotations = self.getAllAnnotations(imageList)
+    # bbox detection
     if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
       AnnotationType = "bbox_detection"
+    # segmentation
     elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
       AnnotationType = "segmenation"
 
     print("Creating dataset VOC:", self.output_dir)
-
     classes = {"__ignore__":-1, "_background_":0, }
     for annotation in annotations:
       class_name = annotation["label"]
@@ -2172,20 +2278,168 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
   def onExportCOCO(self):
-    caption = self.tr("%s - Choose File") % __appname__
-    filters = self.tr("Label files (*%s)") % LabelFile.suffix
+    if not self.output_dir:   self.onChangeOutputDir()
+    if not self.output_dir:   return False
 
-  def onImportPixel(self):
-    caption = self.tr("%s - Choose File") % __appname__
-    filters = self.tr("Label files (*%s)") % LabelFile.suffix
+    imageList = [self.imagePath]
+    if len(self.imageList) > 0:
+      mb = QtWidgets.QMessageBox
+      msg = self.tr('File List exists. Do you want to export all files?')
+      answer = mb.question(
+        self,
+        self.tr("Export all files"),
+        msg,
+        mb.Ok | mb.Cancel,
+        mb.Ok,
+      )
+      if answer == mb.Ok:        imageList = self.imageList
 
-  def onImportVOC(self):
-    caption = self.tr("%s - Choose File") % __appname__
-    filters = self.tr("Label files (*%s)") % LabelFile.suffix
+    annotations = self.getAllAnnotations(imageList)
+    # bbox detection
+    if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+      return False
 
-  def onImportCOCO(self):
-    caption = self.tr("%s - Choose File") % __appname__
-    filters = self.tr("Label files (*%s)") % LabelFile.suffix
+    print("Creating dataset COCO:", self.output_dir)
+    classes = {"__ignore__":-1, "_background_":0, }
+    for annotation in annotations:
+      class_name = annotation["label"]
+      if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
+        classes[class_name] = len(classes)-1
+
+    class_names = list(classes.keys())
+    del class_names[0]
+
+    if osp.isdir(osp.join(self.output_dir, "COCO")):
+      shutil.rmtree(osp.join(self.output_dir, "COCO"))
+    
+    os.makedirs(osp.join(self.output_dir, "COCO"))
+    os.makedirs(osp.join(self.output_dir, "COCO", "JPEGImages"))
+    os.makedirs(osp.join(self.output_dir, "COCO", "Visualization"))
+    
+    now = datetime.datetime.now()
+    data = dict(
+      info=dict(
+        description=None,
+        url=None,
+        version=None,
+        year=now.year,
+        contributor=None,
+        date_created=now.strftime("%Y-%m-%d %H:%M:%S.%f"),
+      ),
+      licenses=[dict(url=None, id=0, name=None,)],
+      images=[
+        # license, url, file_name, height, width, date_captured, id
+      ],
+      type="instances",
+      annotations=[
+        # segmentation, area, iscrowd, image_id, bbox, category_id, id
+      ],
+      categories=[
+        # supercategory, id, name
+      ],
+    )
+
+    out_ann_file = osp.join(self.output_dir, "COCO", "annotations.json")
+    for image_id, imagename in enumerate(imageList):
+      base = osp.splitext(osp.basename(imagename))[0]
+      out_img_file = osp.join(self.output_dir, "COCO", "JPEGImages", base + ".jpg")
+      out_viz_file = osp.join(self.output_dir, "COCO", "Visualization", base + ".jpg")
+
+      label_file = osp.splitext(imagename)[0] + ".json"
+      labelFile = LabelFile(label_file)
+      if labelFile.imageData is None:
+        labelFile.imageData = LabelFile.load_image_file(imagename)
+
+      img = utils.img_data_to_arr(labelFile.imageData)
+      imgviz.io.imsave(out_img_file, img)
+
+      data["images"].append(
+        dict(
+          license=0,
+          url=None,
+          file_name=osp.relpath(out_img_file, osp.dirname(out_ann_file)),
+          height=img.shape[0],
+          width=img.shape[1],
+          date_captured=None,
+          id=image_id,
+        )
+      )
+
+      masks = {}  # for area
+      segmentations = collections.defaultdict(list)  # for segmentation
+      for annotation in labelFile.annotations:
+        points = annotation["points"]
+        label = annotation["label"]
+        group_id = annotation.get("group_id")
+        shape_type = annotation.get("shape_type", "polygon")
+        mask = utils.shape_to_mask(
+          img.shape[:2], points, shape_type
+        )
+
+        if group_id is None:
+          group_id = uuid.uuid1()
+
+        instance = (label, group_id)
+
+        if instance in masks:
+          masks[instance] = masks[instance] | mask
+        else:
+          masks[instance] = mask
+
+        if shape_type == "rectangle":
+          (x1, y1), (x2, y2) = points
+          x1, x2 = sorted([x1, x2])
+          y1, y2 = sorted([y1, y2])
+          points = [x1, y1, x2, y1, x2, y2, x1, y2]
+        else:
+          points = np.asarray(points).flatten().tolist()
+
+        segmentations[instance].append(points)
+      segmentations = dict(segmentations)
+
+      for instance, mask in masks.items():
+        class_name, group_id = instance
+        if class_name not in class_names:
+          continue
+        class_id = classes[class_name]
+
+        mask = np.asfortranarray(mask.astype(np.uint8))
+        mask = cocomask.encode(mask)
+        area = float(cocomask.area(mask))
+        bbox = cocomask.toBbox(mask).flatten().tolist()
+
+        data["annotations"].append(
+          dict(
+            id=len(data["annotations"]),
+            image_id=image_id,
+            category_id=class_id,
+            segmentation=segmentations[instance],
+            area=area,
+            bbox=bbox,
+            iscrowd=0,
+          )
+        )
+
+      labels, captions, masks = zip(
+        *[
+          (classes[cnm], cnm, msk)
+          for (cnm, gid), msk in masks.items()
+          if cnm in class_names
+        ]
+      )
+      viz = imgviz.instances2rgb(
+        image=img,
+        labels=labels,
+        masks=masks,
+        captions=captions,
+        font_size=15,
+        line_width=2,
+      )
+      imgviz.io.imsave(out_viz_file, viz)
+
+      with open(out_ann_file, "w") as f:
+        json.dump(data, f)
+      
 
   # Message Dialogs. #
   def hasLabels(self):
@@ -2201,7 +2455,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if self.filename is None:
       return False
 
-    label_file = self.getLabelFile()
+    label_file = self.getLabelFile(self.filename)
     return osp.exists(label_file)
 
   def mayContinue(self):

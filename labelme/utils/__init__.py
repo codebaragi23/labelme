@@ -15,6 +15,7 @@ from .convert import polygons_to_mask
 from .convert import shape_to_mask
 from .convert import annotations_to_label
 
+from .qt import addTitle
 from .qt import newIcon
 from .qt import newButton
 from .qt import newAction
