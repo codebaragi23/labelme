@@ -49,6 +49,7 @@ class Annotation(object):
     self.points = []
     self.fill = False
     self.selected = False
+    self.show_pixelmap = False
     self.shape_type = shape_type
     self.flags = flags
     self.other_data = {}
@@ -122,6 +123,15 @@ class Annotation(object):
     x1, y1 = pt1.x(), pt1.y()
     x2, y2 = pt2.x(), pt2.y()
     return QtCore.QRectF(x1, y1, x2 - x1, y2 - y1)
+  
+  def setColor(self, rgb):
+    r, g, b = rgb
+    self.line_color = QtGui.QColor(r, g, b)
+    self.vertex_fill_color = QtGui.QColor(r, g, b)
+    self.hvertex_fill_color = QtGui.QColor(255, 255, 255)
+    self.fill_color = QtGui.QColor(r, g, b, 128)
+    self.select_line_color = QtGui.QColor(255, 255, 255)
+    self.select_fill_color = QtGui.QColor(r, g, b, 155)
 
   def paint(self, painter):
     if self.points:
@@ -168,16 +178,24 @@ class Annotation(object):
         if self.isClosed():
           line_path.lineTo(self.points[0])
 
-      painter.drawPath(line_path)
-      painter.drawPath(vrtx_path)
-      painter.fillPath(vrtx_path, self._vertex_fill_color)
-      if self.fill:
+      if self.show_pixelmap:
         color = (
           self.select_fill_color
           if self.selected
           else self.fill_color
         )
         painter.fillPath(line_path, color)
+      else:
+        painter.drawPath(line_path)
+        painter.drawPath(vrtx_path)
+        painter.fillPath(vrtx_path, self._vertex_fill_color)
+        if self.fill:
+          color = (
+            self.select_fill_color
+            if self.selected
+            else self.fill_color
+          )
+          painter.fillPath(line_path, color)
 
   def drawVertex(self, path, i):
     d = self.point_size / self.scale

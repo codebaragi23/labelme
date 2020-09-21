@@ -37,8 +37,13 @@
     </message>
     <message>
         <location filename="../app.py" line="124"/>
-        <source>AAnnotation List</source>
-        <translation>주석 목록</translation>
+        <source>Labels</source>
+        <translation>레이블</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="124"/>
+        <source>Annotations</source>
+        <translation>주석</translation>
     </message>
     <message>
         <location filename="../app.py" line="148"/>
@@ -476,21 +481,6 @@
         <translation>COCO 데이터셋 포맷으로 내보내기</translation>
     </message>
     <message>
-        <location filename="../app.py" line="584"/>
-        <source>Import pixel labeling</source>
-        <translation>화소 레이블링으로 가져오기</translation>
-    </message>
-    <message>
-        <location filename="../app.py" line="591"/>
-        <source>Import VOC dataset format</source>
-        <translation>VOC 데이터셋 포맷으로 가져오기</translation>
-    </message>
-    <message>
-        <location filename="../app.py" line="598"/>
-        <source>Import COCO dataset format</source>
-        <translation>COCO 데이터셋 포맷으로 가져오기</translation>
-    </message>
-    <message>
         <location filename="../app.py" line="640"/>
         <source>&amp;File</source>
         <translation>파일(&amp;F)</translation>
@@ -503,7 +493,7 @@
     <message>
         <location filename="../app.py" line="709"/>
         <source>&amp;Dataset</source>
-        <translation>데이터셋(&amp;E)</translation>
+        <translation>데이터셋(&amp;D)</translation>
     </message>
     <message>
         <location filename="../app.py" line="640"/>

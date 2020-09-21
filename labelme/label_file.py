@@ -31,6 +31,10 @@ def open(name, mode):
 class LabelFileError(Exception):
   pass
 
+def LabelFileFromGeo(geo):
+  labelFile = LabelFile()
+  labelFile.fromGeo(geo)
+  return labelFile
 
 class LabelFile(object):
   suffix = ".json"
@@ -42,7 +46,6 @@ class LabelFile(object):
     if filename is not None:
       self.load(filename)
     self.filename = filename
-    self.format=format
 
   @staticmethod
   def load_image_file(filename):
@@ -51,7 +54,7 @@ class LabelFile(object):
     try:
       if ext in [".tif", ".tiff"]:
         image = tifffile.imread(filename)
-        image = image.astype('uint8')
+        image = image.astype("uint8")
         image = image[:,:,:3]
         image_pil = PIL.Image.fromarray(image)
       else:
@@ -74,8 +77,46 @@ class LabelFile(object):
       f.seek(0)
       return f.read()
 
+  def fromGeo(self, data):
+    keys = [
+      "features",  # polygonal annotations
+    ]
+    features_keys = [
+      "type",
+      "properties",
+      "geometry",
+    ]
+    annotation_keys = [
+      "id",
+      "type",
+      "geometry",
+    ]
 
-  def load_simple(self, filename, data):
+    # relative path from label file to relative path from cwd
+    annotations = [
+      dict(
+        label=feature["properties"]["작물ID"],
+        shape_type=feature["geometry"]["type"].lower(),
+        points=[[x, -y] for x, y in feature["geometry"]["coordinates"][0]],
+        flags=feature.get("flags", {}),
+        group_id=feature.get("group_id", None),
+        other_data={
+          k:v for k, v in feature.items() if k not in annotation_keys
+        },
+      )
+      for feature in data["features"]
+    ]
+
+    otherData = {k:v for k, v in data.items() if k not in keys}
+    
+    self.flags = {}
+    self.imagePath = None
+    self.imageData = None
+    self.filename = None
+    self.annotations = annotations
+    self.otherData = otherData
+
+  def load(self, filename):
     keys = [
       "version",
       "imageData",
@@ -93,94 +134,16 @@ class LabelFile(object):
       "flags",
     ]
 
-    if data["imageData"] is not None:
-      imageData = base64.b64decode(data["imageData"])
-      if PY2 and QT4:
-        imageData = utils.img_data_to_png_data(imageData)
-    else:
-      # relative path from label file to relative path from cwd
-      imagePath = osp.join(osp.dirname(filename), data["imagePath"])
-      imageData = self.load_image_file(imagePath)
-
-    flags = data.get("flags") or {}
-    imagePath = data["imagePath"]
-    self._check_image_height_and_width(
-      base64.b64encode(imageData).decode("utf-8"),
-      data.get("imageHeight"),
-      data.get("imageWidth"),
-    )
-    annotations = [
-      dict(
-        label=annot["label"],
-        shape_type=annot.get("shape_type", "polygon"),
-        points=annot["points"],
-        flags=annot.get("flags", {}),
-        group_id=annot.get("group_id"),
-        other_data={
-          k: v for k, v in annot.items() if k not in annotation_keys
-        },
-      )
-      for annot in data["annotations"]
-    ]
-
-    otherData = {}
-    for key, value in data.items():
-      if key not in keys:
-        otherData[key] = value
-
-    return flags, annotations, imagePath, imageData, otherData
-
-  def load_geojson(self, filename, data):
-    keys = [
-      "features",  # polygonal annotations
-    ]
-    features_keys = [
-      "type",
-      "properties",
-      "geometry",
-    ]
-    annotation_keys = [
-      "type",
-      "coordinates",
-    ]
-
-    # relative path from label file to relative path from cwd
-    imageData = None
-
-    flags = {}
-    imagePath = None
-    annotations = [
-      dict(
-        label=feature["properties"]["작물ID"],
-        shape_type=feature["geometry"]["type"].lower(),
-        points=[[x, -y] for x, y in feature["geometry"]["coordinates"][0]],
-        flags=feature.get("flags", {}),
-        group_id=feature.get("group_id", None),
-        other_data={
-          k:v for k, v in feature.items() if k not in annotation_keys
-        },
-      )
-      for feature in data["features"]
-    ]
-
-    otherData = {k:v for k, v in data.items() if k not in keys}
-    return flags, annotations, imagePath, imageData, otherData
-
-  def load(self, filename):
     try:
       with open(filename, "r") as f:
         data = json.load(f)
         version = data.get("version")
-        self.format = 'simple'
-        if version is None:
-          if data.get("type") == "FeatureCollection":
-            self.format = "GeoJSON"
-          else:
-            logger.warn(
-              "Loading JSON file ({}) of unknown version".format(
-                filename
-              )
+        if version is None and format == "simple":
+          logger.warn(
+            "Loading JSON file ({}) of unknown version".format(
+              filename
             )
+          )
         elif version.split(".")[0] != __version__.split(".")[0]:
           logger.warn(
             "This JSON file ({}) may be incompatible with "
@@ -190,10 +153,40 @@ class LabelFile(object):
             )
           )
       
-      if self.format == 'simple':
-        flags, annotations, imagePath, imageData, otherData = self.load_simple(filename, data)
-      elif self.format == 'GeoJSON':
-        flags, annotations, imagePath, imageData, otherData = self.load_geojson(filename, data)
+      if data["imageData"] is not None:
+        imageData = base64.b64decode(data["imageData"])
+        if PY2 and QT4:
+          imageData = utils.img_data_to_png_data(imageData)
+      else:
+        # relative path from label file to relative path from cwd
+        imagePath = osp.join(osp.dirname(filename), data["imagePath"])
+        imageData = self.load_image_file(imagePath)
+
+      flags = data.get("flags") or {}
+      imagePath = data["imagePath"]
+      self._check_image_height_and_width(
+        base64.b64encode(imageData).decode("utf-8"),
+        data.get("imageHeight"),
+        data.get("imageWidth"),
+      )
+      annotations = [
+        dict(
+          label=annot["label"],
+          shape_type=annot.get("shape_type", "polygon"),
+          points=annot["points"],
+          flags=annot.get("flags", {}),
+          group_id=annot.get("group_id"),
+          other_data={
+            k: v for k, v in annot.items() if k not in annotation_keys
+          },
+        )
+        for annot in data["annotations"]
+      ]
+
+      otherData = {}
+      for key, value in data.items():
+        if key not in keys:
+          otherData[key] = value
 
     except Exception as e:
       raise LabelFileError(e)
@@ -233,7 +226,6 @@ class LabelFile(object):
     imageData=None,
     otherData=None,
     flags=None,
-    format="simple"
   ):
     if imageData is not None:
       imageData = base64.b64encode(imageData).decode("utf-8")
@@ -245,26 +237,25 @@ class LabelFile(object):
     if flags is None:
       flags = {}
     
-    if format == "simple":
-      data = dict(
-        version=__version__,
-        flags=flags,
-        annotations=annotations,
-        imagePath=imagePath,
-        imageData=imageData,
-        imageHeight=imageHeight,
-        imageWidth=imageWidth,
-      )
-      for key, value in otherData.items():
-        assert key not in data
-        data[key] = value
+    data = dict(
+      version=__version__,
+      flags=flags,
+      annotations=annotations,
+      imagePath=imagePath,
+      imageData=imageData,
+      imageHeight=imageHeight,
+      imageWidth=imageWidth,
+    )
+    for key, value in otherData.items():
+      assert key not in data
+      data[key] = value
 
-    elif format == 'GeoJSON':
-      data = dict(
-        type=otherData.get("type", "FeatureCollection"),
-        crs=otherData.get("crs", { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32652" } }),
-        features= [dict({"type":"Feature", "properties":{"관리번호":None, "작물ID": k["label"], "작업위치":None}, "geometry":{"type":k["shape_type"].capitalize(), "coordinates":[[[x, -y] for x, y in k["points"] ]]}}) for k in annotations]
-      )
+    # if format == 'GeoJSON':
+    #   data = dict(
+    #     type=otherData.get("type", "FeatureCollection"),
+    #     crs=otherData.get("crs", { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32652" } }),
+    #     features= [dict({"type":"Feature", "properties":{"관리번호":None, "작물ID": k["label"], "작업위치":None}, "geometry":{"type":k["shape_type"].capitalize(), "coordinates":[[[x, -y] for x, y in k["points"] ]]}}) for k in annotations]
+    #   )
 
     try:
       with open(filename, "w") as f:

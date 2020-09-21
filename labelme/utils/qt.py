@@ -10,6 +10,19 @@ from qtpy import QtWidgets
 
 here = osp.dirname(osp.abspath(__file__))
 
+def addTitle(widget, title):
+  label = QtWidgets.QLabel(title)
+  label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignBottom)
+  label.setContentsMargins(10,5,0,0)
+
+  labelListLayout = QtWidgets.QVBoxLayout()
+  labelListLayout.setContentsMargins(0,0,0,0)
+  labelListLayout.addWidget(label)
+  labelListLayout.addWidget(widget)
+
+  labelListWidget = QtWidgets.QWidget()
+  labelListWidget.setLayout(labelListLayout)
+  return labelListWidget
 
 def newIcon(icon):
   icons_dir = osp.join(here, "../icons")
