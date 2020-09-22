@@ -2274,7 +2274,7 @@ class MainWindow(QtWidgets.QMainWindow):
         version=None,
         year=now.year,
         contributor=None,
-        date_created=now.strftime("%Y-%m-%d %H:%M:%S.%f"),
+        date_created=now.strftime("%Y/%m/%d"),
       ),
       licenses=[dict(url=None, id=0, name=None,)],
       images=[
@@ -2503,26 +2503,29 @@ class MainWindow(QtWidgets.QMainWindow):
       ".%s" % fmt.data().decode().lower()
       for fmt in QtGui.QImageReader.supportedImageFormats()
     ]
-
+  
+    self.lastOpenDir = None
     self.filename = None
+    self.fileListWidget.clear()
     for file in imageFiles:
       if file in self.imageList or not file.lower().endswith(
         tuple(extensions)
       ):
         continue
-      label_file = self.getLabelFile(imagename)
+      label_file = self.getLabelFile(file)
       if self.output_dir:
         label_file_without_path = osp.basename(label_file)
         label_file = osp.join(self.output_dir, label_file_without_path)
-      item = QtWidgets.QListWidgetItem(file)
+      item = QtWidgets.QListWidgetItem(osp.basename(file))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
-        label_file
-      ):
+      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
         item.setCheckState(Qt.Checked)
       else:
         item.setCheckState(Qt.Unchecked)
       self.fileListWidget.addItem(item)
+
+      if self.lastOpenDir is None:
+        self.lastOpenDir = osp.dirname(file)
 
     if len(self.imageList) > 1:
       self.actions.openNextImg.setEnabled(True)
