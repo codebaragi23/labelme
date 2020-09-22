@@ -19,6 +19,29 @@
     </message>
 </context>
 <context>
+    <name>AppearanceWidget</name>
+    <message>
+        <location filename="../widgets/appearance_widget.py" line="15"/>
+        <source>Reset</source>
+        <translation>초기화</translation>
+    </message>
+    <message>
+        <location filename="../widgets/appearance_widget.py" line="19"/>
+        <source>Show pixelmap</source>
+        <translation>픽셀맵 보기</translation>
+    </message>
+    <message>
+        <location filename="../widgets/appearance_widget.py" line="23"/>
+        <source>Brightness</source>
+        <translation>밝기</translation>
+    </message>
+    <message>
+        <location filename="../widgets/appearance_widget.py" line="24"/>
+        <source>Contrast</source>
+        <translation>대조</translation>
+    </message>
+</context>
+<context>
     <name>MainWindow</name>
     <message>
         <location filename="../app.py" line="112"/>
@@ -54,6 +77,11 @@
         <location filename="../app.py" line="159"/>
         <source>File List</source>
         <translation>파일 목록</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="159"/>
+        <source>Appearance</source>
+        <translation>외관</translation>
     </message>
     <message>
         <location filename="../app.py" line="210"/>
@@ -326,14 +354,24 @@
         <translation>마지막으로 그린 점 실행 취소</translation>
     </message>
     <message>
-        <location filename="../app.py" line="398"/>
+        <location filename="../app.py" line="443"/>
         <source>Add Point to Edge</source>
         <translation>모서리에 점 추가</translation>
     </message>
     <message>
-        <location filename="../app.py" line="398"/>
+        <location filename="../app.py" line="447"/>
         <source>Add point to the nearest edge</source>
         <translation>가까운 모서리에 점 추가</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="451"/>
+        <source>Remove Selected Point</source>
+        <translation>선택한 점 삭제</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="454"/>
+        <source>Remove selected point from polygon</source>
+        <translation>다각형에서 선택한 점 삭제</translation>
     </message>
     <message>
         <location filename="../app.py" line="414"/>
@@ -437,8 +475,8 @@
     </message>
     <message>
         <location filename="../app.py" line="502"/>
-        <source>&amp;Brightness Contrast</source>
-        <translation>밝기 대비</translation>
+        <source>&amp;Brightness / Contrast</source>
+        <translation>밝기 / 대비</translation>
     </message>
     <message>
         <location filename="../app.py" line="502"/>
@@ -453,7 +491,7 @@
     <message>
         <location filename="../app.py" line="528"/>
         <source>Modify the label of the selected polygon</source>
-        <translation>선택된 다각형의 레이블 편집</translation>
+        <translation>선택한 다각형의 레이블 편집</translation>
     </message>
     <message>
         <location filename="../app.py" line="537"/>
@@ -549,6 +587,11 @@
         <location filename="../app.py" line="1245"/>
         <source>&lt;b&gt;%s&lt;/b&gt;</source>
         <translation>&lt;b&gt;%s&lt;/b&gt;</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="502"/>
+        <source>Brightness / Contrast</source>
+        <translation>밝기 / 대비</translation>
     </message>
     <message>
         <location filename="../app.py" line="1464"/>

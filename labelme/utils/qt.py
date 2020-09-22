@@ -1,6 +1,7 @@
 from math import sqrt
-import os.path as osp
+from contextlib import contextmanager
 
+import os.path as osp
 import numpy as np
 
 from qtpy import QtCore
@@ -109,3 +110,18 @@ def distancetoline(point, line):
 def fmtShortcut(text):
   mod, key = text.split("+", 1)
   return "<b>%s</b>+<b>%s</b>" % (mod, key)
+
+@contextmanager
+def slot_disconnected(signal, slot):
+  """
+  Create context to perform operations with given slot disconnected from
+  given signal and automatically connected afterwards.
+  usage:
+      with slot_disconnected(chkbox.stateChanged, self._stateChanged):
+          foo()
+          bar()
+  """
+
+  signal.disconnect(slot)
+  yield
+  signal.connect(slot)
