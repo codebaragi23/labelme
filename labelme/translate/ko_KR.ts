@@ -69,6 +69,11 @@
         <translation>주석</translation>
     </message>
     <message>
+        <location filename="../app.py" line="127"/>
+        <source>Path</source>
+        <translation>경로</translation>
+    </message>
+    <message>
         <location filename="../app.py" line="148"/>
         <source>Search Filename</source>
         <translation>파일이름 검색</translation>

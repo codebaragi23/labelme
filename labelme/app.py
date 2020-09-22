@@ -122,6 +122,11 @@ class MainWindow(QtWidgets.QMainWindow):
     )
 
     self.lastOpenDir = None
+    
+    self.fileListPath = QtWidgets.QLineEdit()
+    self.fileListPath.setPlaceholderText(self.tr("Path"))
+    self.fileListPath.addAction(utils.newIcon("open"), QtWidgets.QLineEdit.LeadingPosition)
+    self.fileListPath.setReadOnly(True)
 
     self.fileSearch = QtWidgets.QLineEdit()
     self.fileSearch.setPlaceholderText(self.tr("Search Filename"))
@@ -133,6 +138,8 @@ class MainWindow(QtWidgets.QMainWindow):
     fileListLayout = QtWidgets.QVBoxLayout()
     fileListLayout.setContentsMargins(0, 0, 0, 0)
     fileListLayout.setSpacing(0)
+    fileListLayout.addWidget(self.fileListPath)
+    fileListLayout.addSpacing(5)
     fileListLayout.addWidget(self.fileSearch)
     fileListLayout.addWidget(self.fileListWidget)
     fileListWidget = QtWidgets.QWidget()
@@ -2540,6 +2547,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if not self.mayContinue() or not dirpath:
       return
 
+    self.fileListPath.setText(dirpath)
     self.lastOpenDir = dirpath
     self.filename = None
     self.fileListWidget.clear()
