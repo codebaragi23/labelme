@@ -1,0 +1,13 @@
+{
+  "version": "5.0.0",
+  "worker": "nara",
+  "work": [
+    {
+      "uploaded": "2020-04-01 11:23",
+      "num_images": 3,
+      "pass_images": 2
+    }
+  ],
+  "confidence_score": 95,
+  "last uploaded": "2020-04-01 11:23"
+}
