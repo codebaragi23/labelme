@@ -133,8 +133,46 @@ class Annotation(object):
     self.select_line_color = QtGui.QColor(255, 255, 255)
     self.select_fill_color = QtGui.QColor(r, g, b, 155)
 
+  def prepare_paint(self):
+    line_path = QtGui.QPainterPath()
+    vrtx_path = QtGui.QPainterPath()
+
+    if self.shape_type == "rectangle":
+      assert len(self.points) in [1, 2]
+      if len(self.points) == 2:
+        rectangle = self.getRectFromLine(*self.points)
+        line_path.addRect(rectangle)
+      for i in range(len(self.points)):
+        self.drawVertex(vrtx_path, i)
+    elif self.shape_type == "circle":
+      assert len(self.points) in [1, 2]
+      if len(self.points) == 2:
+        rectangle = self.getCircleRectFromLine(self.points)
+        line_path.addEllipse(rectangle)
+      for i in range(len(self.points)):
+        self.drawVertex(vrtx_path, i)
+    elif self.shape_type == "linestrip":
+      line_path.moveTo(self.points[0])
+      for i, p in enumerate(self.points):
+        line_path.lineTo(p)
+        self.drawVertex(vrtx_path, i)
+    else:
+      line_path.moveTo(self.points[0])
+      # Uncommenting the following line will draw 2 paths
+      # for the 1st vertex, and make it non-filled, which
+      # may be desirable.
+      # self.drawVertex(vrtx_path, 0)
+
+      for i, p in enumerate(self.points):
+        line_path.lineTo(p)
+        self.drawVertex(vrtx_path, i)
+      if self.isClosed():
+        line_path.lineTo(self.points[0])
+    return line_path, vrtx_path
+
   def paint(self, painter):
     if self.points:
+      line_path, vrtx_path = self.prepare_paint()
       color = (
         self.select_line_color if self.selected else self.line_color
       )
@@ -142,60 +180,33 @@ class Annotation(object):
       # Try using integer sizes for smoother drawing(?)
       pen.setWidth(max(1, int(round(2.0 / self.scale))))
       painter.setPen(pen)
-
-      line_path = QtGui.QPainterPath()
-      vrtx_path = QtGui.QPainterPath()
-
-      if self.shape_type == "rectangle":
-        assert len(self.points) in [1, 2]
-        if len(self.points) == 2:
-          rectangle = self.getRectFromLine(*self.points)
-          line_path.addRect(rectangle)
-        for i in range(len(self.points)):
-          self.drawVertex(vrtx_path, i)
-      elif self.shape_type == "circle":
-        assert len(self.points) in [1, 2]
-        if len(self.points) == 2:
-          rectangle = self.getCircleRectFromLine(self.points)
-          line_path.addEllipse(rectangle)
-        for i in range(len(self.points)):
-          self.drawVertex(vrtx_path, i)
-      elif self.shape_type == "linestrip":
-        line_path.moveTo(self.points[0])
-        for i, p in enumerate(self.points):
-          line_path.lineTo(p)
-          self.drawVertex(vrtx_path, i)
-      else:
-        line_path.moveTo(self.points[0])
-        # Uncommenting the following line will draw 2 paths
-        # for the 1st vertex, and make it non-filled, which
-        # may be desirable.
-        # self.drawVertex(vrtx_path, 0)
-
-        for i, p in enumerate(self.points):
-          line_path.lineTo(p)
-          self.drawVertex(vrtx_path, i)
-        if self.isClosed():
-          line_path.lineTo(self.points[0])
-
-      if self.show_pixelmap:
+      painter.drawPath(line_path)
+      painter.drawPath(vrtx_path)
+      painter.fillPath(vrtx_path, self._vertex_fill_color)
+      if self.fill:
         color = (
           self.select_fill_color
           if self.selected
           else self.fill_color
         )
         painter.fillPath(line_path, color)
-      else:
-        painter.drawPath(line_path)
-        painter.drawPath(vrtx_path)
-        painter.fillPath(vrtx_path, self._vertex_fill_color)
-        if self.fill:
-          color = (
-            self.select_fill_color
-            if self.selected
-            else self.fill_color
-          )
-          painter.fillPath(line_path, color)
+
+  def paint_pixelmap(self, painter):
+    if self.points:
+      line_path, vrtx_path = self.prepare_paint()
+      color = (
+        self.select_line_color if self.selected else self.line_color
+      )
+      pen = QtGui.QPen(color)
+      # Try using integer sizes for smoother drawing(?)
+      pen.setWidth(max(1, int(round(2.0 / self.scale))))
+      painter.setPen(pen)
+      color = (
+        self.select_fill_color
+        if self.selected
+        else self.fill_color
+      )
+      painter.fillPath(line_path, color)
 
   def drawVertex(self, path, i):
     d = self.point_size / self.scale

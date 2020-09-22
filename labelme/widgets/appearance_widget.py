@@ -34,10 +34,10 @@ class AppearanceWidget(QtWidgets.QWidget):
     self.annotations = annotations
 
   @Slot(int)
-  def onNewValue(self, value):
-    brightness = self.slider_brightness.value() / 50.0
-    contrast = self.slider_contrast.value() / 50.0
-    self.callback(brightness, contrast)
+  def onSliderValueChanged(self, value):
+    self.brightness = self.slider_brightness.value() / 50.0
+    self.contrast = self.slider_contrast.value() / 50.0
+    self.callback(brightness=self.brightness, contrast=self.contrast)
 
   @Slot()
   def onReset(self):
@@ -47,18 +47,21 @@ class AppearanceWidget(QtWidgets.QWidget):
   @Slot("QCheckBox")
   def onChangeShowPixelmal(self, ckb):
     if ckb.isChecked():
-      for annotation in self.annotations:
-        annotation.show_pixelmap = True
-      self.brightness = self.slider_brightness.value()
-      self.slider_brightness.setValue(0)
+      self.brightness = self.slider_brightness.value() / 50.0
+      self.contrast = self.slider_contrast.value() / 50.0
+      with utils.slot_disconnected(self.slider_brightness.valueChanged, self.onSliderValueChanged):
+        self.slider_brightness.setValue(0)
+      self.callback(show_pixelmap=True)
     else:
-      for annotation in self.annotations:
-        annotation.show_pixelmap = False
-      self.slider_brightness.setValue(self.brightness)
+      with utils.slot_disconnected(self.slider_brightness.valueChanged, self.onSliderValueChanged):
+        self.slider_brightness.setValue(self.brightness * 50.0)
+      with utils.slot_disconnected(self.slider_contrast.valueChanged, self.onSliderValueChanged):
+        self.slider_contrast.setValue(self.contrast * 50.0)
+      self.callback(brightness=self.brightness, contrast=self.contrast, show_pixelmap=False)
 
   def _create_slider(self):
     slider = QtWidgets.QSlider(Qt.Horizontal)
     slider.setRange(0, 150)
     slider.setValue(50)
-    slider.valueChanged.connect(self.onNewValue)
+    slider.valueChanged.connect(self.onSliderValueChanged)
     return slider

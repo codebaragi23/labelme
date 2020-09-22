@@ -141,11 +141,10 @@ class MainWindow(QtWidgets.QMainWindow):
     self.file_dock.setObjectName(u"Files")
     self.file_dock.setWidget(fileListWidget)
 
+    self.appearance_widget = AppearanceWidget(self.onAppearanceChangedCallback)
+    self.appearance_widget.setEnabled(False)
     self.appe_dock = QtWidgets.QDockWidget(self.tr(u"Appearance"), self)
     self.appe_dock.setObjectName(u"Appearance")
-
-    self.appearance_widget = AppearanceWidget(self.onNewBrightnessContrast)
-    self.appearance_widget.setEnabled(False)
     self.appe_dock.setWidget(self.appearance_widget)
     
     self.flag_dock = self.flag_widget = None
@@ -449,10 +448,10 @@ class MainWindow(QtWidgets.QMainWindow):
       enabled=False,
     )
     removePoint = action(
-      text="Remove Selected Point",
+      text=self.tr("Remove Selected Point"),
       slot=self.canvas.removeSelectedPoint,
       icon="edit",
-      tip="Remove selected point from polygon",
+      tip=self.tr("Remove selected point from polygon"),
       enabled=False,
     )
 
@@ -542,14 +541,6 @@ class MainWindow(QtWidgets.QMainWindow):
       "fit-width",
       self.tr("Zoom follows window width"),
       checkable=True,
-      enabled=False,
-    )
-    brightnessContrast = action(
-      self.tr("&Brightness Contrast"),
-      self.brightnessContrast,
-      None,
-      "color",
-      self.tr("Adjust brightness and contrast"),
       enabled=False,
     )
     # Group zoom controls into a list for easier toggling.
@@ -653,7 +644,6 @@ class MainWindow(QtWidgets.QMainWindow):
       zoomOrg=zoomOrg,
       fitWindow=fitWindow,
       fitWidth=fitWidth,
-      brightnessContrast=brightnessContrast,
       zoomActions=zoomActions,
       openNextImg=openNextImg,
       openPrevImg=openPrevImg,
@@ -698,7 +688,6 @@ class MainWindow(QtWidgets.QMainWindow):
         createPointMode,
         createLineStripMode,
         editMode,
-        brightnessContrast,
       ),
       onAnnotationsPresent=(saveAs, hideAll, showAll),
       exportDetectMenu=(
@@ -777,10 +766,10 @@ class MainWindow(QtWidgets.QMainWindow):
     utils.addActions(
       self.menus.view,
       (
+        self.file_dock.toggleViewAction(),
+        self.appe_dock.toggleViewAction(),
         self.flag_dock.toggleViewAction(),
         self.label_dock.toggleViewAction(),
-        #self.annot_dock.toggleViewAction(),
-        self.file_dock.toggleViewAction(),
         None,
         fill_drawing,
         None,
@@ -794,7 +783,6 @@ class MainWindow(QtWidgets.QMainWindow):
         fitWindow,
         fitWidth,
         None,
-        brightnessContrast,
       ),
     )
 
@@ -826,7 +814,6 @@ class MainWindow(QtWidgets.QMainWindow):
       copy,
       delete,
       undo,
-      brightnessContrast,
       None,
       zoom,
       fitWidth,
@@ -853,7 +840,6 @@ class MainWindow(QtWidgets.QMainWindow):
     self.zoom_level = 100
     self.fit_window = False
     self.zoom_values = {}  # key=filename, value=(zoom_mode, zoom_value)
-    self.brightnessContrast_values = {}
     self.scroll_values = {
       Qt.Horizontal: {},
       Qt.Vertical: {},
@@ -942,7 +928,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def setDirty(self):
     if self._config["auto_save"] or self.actions.saveAuto.isChecked():
-      label_file = osp.splitext(self.imagePath)[0] + ".json"
+      label_file = self.getLabelFile(self.imagePath)
       if self.output_dir:
         label_file_without_path = osp.basename(label_file)
         label_file = osp.join(self.output_dir, label_file_without_path)
@@ -1499,47 +1485,22 @@ class MainWindow(QtWidgets.QMainWindow):
     self.zoomMode = self.FIT_WIDTH if value else self.MANUAL_ZOOM
     self.adjustScale()
 
-  def onNewBrightnessContrast(self, brightness, contrast):
-    self.brightnessContrast_values[self.filename] = (brightness, contrast)
+  def onAppearanceChangedCallback(self, brightness=1, contrast=1, show_pixelmap=None):
     img = utils.img_data_to_pil(self.imageData)
-    img = ImageEnhance.Brightness(img).enhance(brightness)
-    img = ImageEnhance.Contrast(img).enhance(contrast)
+    if show_pixelmap:
+      img = ImageEnhance.Brightness(img).enhance(0)
+      self.canvas.show_pixelmap = True
+    else:
+      img = ImageEnhance.Brightness(img).enhance(brightness)
+      img = ImageEnhance.Contrast(img).enhance(contrast)
+      if show_pixelmap==False:
+        self.canvas.show_pixelmap = False
+      
     img_data = utils.img_pil_to_data(img)
-
     qimage = QtGui.QImage.fromData(img_data)
     self.canvas.loadPixmap(
       QtGui.QPixmap.fromImage(qimage), clear_annotations=False
     )
-
-  def brightnessContrast(self, value):
-    dialog = QtWidgets.QDialog(parent=self)
-    widget = AppearanceWidget()
-    brightness, contrast = self.brightnessContrast_values.get(
-      self.filename, (None, None)
-    )
-    if brightness is not None:
-      widget.slider_brightness.setValue(brightness)
-    if contrast is not None:
-      widget.slider_contrast.setValue(contrast)
-
-    layout = QtWidgets.QVBoxLayout()
-    layout.setContentsMargins(0, 0, 0, 0)
-    layout.addWidget(widget)
-
-    widget.slider_brightness.valueChanged.disconnect()
-    widget.slider_contrast.valueChanged.disconnect()
-
-    widget.slider_brightness.valueChanged.connect(self.appearance_widget.slider_brightness.setValue)
-    widget.slider_contrast.valueChanged.connect(self.appearance_widget.slider_contrast.setValue)
-
-    dialog.setWindowTitle(self.tr("Brightness/Contrast"))
-    dialog.setLayout(layout)
-    dialog.setModal(True)
-    dialog.exec_()
-
-    brightness = widget.slider_brightness.value()
-    contrast = widget.slider_contrast.value()
-    self.brightnessContrast_values[self.filename] = (brightness, contrast)
 
   def togglePolygons(self, value):
     for item in self.annotList:
@@ -1576,7 +1537,7 @@ class MainWindow(QtWidgets.QMainWindow):
   def getAllAnnotations(self, imageList):
     annotations = []
     for imagename in imageList:
-      label_file = osp.splitext(imagename)[0] + ".json"
+      label_file = self.getLabelFile(imagename)
       labelFile = None
       try:
         labelFile = LabelFile(label_file)
@@ -1675,7 +1636,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.filename = filename
     if self._config["keep_prev"]:
       prev_annotations = self.canvas.annotations
-    self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image))
+    
     flags = {k: False for k in self._config["flags"] or []}
     if self.labelFile:
       self.loadLabels(self.labelFile.annotations)
@@ -1693,6 +1654,11 @@ class MainWindow(QtWidgets.QMainWindow):
       self.setDirty()
     else:
       self.setClean()
+
+    # set brightness constrast values
+    brightness = self.appearance_widget.slider_brightness.value() / 50;
+    contrast = self.appearance_widget.slider_contrast.value() / 50
+    self.onAppearanceChangedCallback(brightness=brightness, contrast=contrast)
     self.canvas.setEnabled(True)
 
     if len(self.canvas.annotations) > 0:
@@ -1714,26 +1680,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setScroll(
           orientation, self.scroll_values[orientation][self.filename]
         )
-    # set brightness constrast values
-    widget = AppearanceWidget(self.onNewBrightnessContrast)
-    brightness, contrast = self.brightnessContrast_values.get(
-      self.filename, (None, None)
-    )
-    if self._config["keep_prev_brightness"] and self.recentFiles:
-      brightness, _ = self.brightnessContrast_values.get(
-        self.recentFiles[0], (None, None)
-      )
-    if self._config["keep_prev_contrast"] and self.recentFiles:
-      _, contrast = self.brightnessContrast_values.get(
-        self.recentFiles[0], (None, None)
-      )
-    if brightness is not None:
-      widget.slider_brightness.setValue(brightness)
-    if contrast is not None:
-      widget.slider_contrast.setValue(contrast)
-    self.brightnessContrast_values[self.filename] = (brightness, contrast)
-    if brightness is not None or contrast is not None:
-      widget.onNewValue(None)
+
     self.paintCanvas()
     self.addRecentFile(self.filename)
     self.toggleActions(True)
@@ -2078,7 +2025,7 @@ class MainWindow(QtWidgets.QMainWindow):
       base = osp.splitext(osp.basename(imagename))[0]
       out_img_file = osp.join(self.output_dir, "PixelMap", base + ".png")
 
-      label_file = osp.splitext(imagename)[0] + ".json"
+      label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
         labelFile.imageData = LabelFile.load_image_file(imagename)
@@ -2106,7 +2053,7 @@ class MainWindow(QtWidgets.QMainWindow):
       out_xml_file = osp.join(self.output_dir, "VOC", "Annotations", base + ".xml")
       out_viz_file = osp.join(self.output_dir, "VOC", "AnnotationsVisualization", base + ".jpg")
 
-      label_file = osp.splitext(imagename)[0] + ".json"
+      label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
         labelFile.imageData = LabelFile.load_image_file(imagename)
@@ -2196,7 +2143,7 @@ class MainWindow(QtWidgets.QMainWindow):
       out_insp_file = osp.join(self.output_dir, "VOC", "SegmentationObjectPNG", base + ".png")
       out_insv_file = osp.join(self.output_dir, "VOC", "SegmentationObjectVisualization", base + ".jpg")
 
-      label_file = osp.splitext(imagename)[0] + ".json"
+      label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
         labelFile.imageData = LabelFile.load_image_file(imagename)
@@ -2348,7 +2295,7 @@ class MainWindow(QtWidgets.QMainWindow):
       out_img_file = osp.join(self.output_dir, "COCO", "JPEGImages", base + ".jpg")
       out_viz_file = osp.join(self.output_dir, "COCO", "Visualization", base + ".jpg")
 
-      label_file = osp.splitext(imagename)[0] + ".json"
+      label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
         labelFile.imageData = LabelFile.load_image_file(imagename)
@@ -2563,7 +2510,7 @@ class MainWindow(QtWidgets.QMainWindow):
         tuple(extensions)
       ):
         continue
-      label_file = osp.splitext(file)[0] + ".json"
+      label_file = self.getLabelFile(imagename)
       if self.output_dir:
         label_file_without_path = osp.basename(label_file)
         label_file = osp.join(self.output_dir, label_file_without_path)
@@ -2596,15 +2543,13 @@ class MainWindow(QtWidgets.QMainWindow):
     for filename in self.scanAllImages(dirpath):
       if pattern and pattern not in filename:
         continue
-      label_file = osp.splitext(filename)[0] + ".json"
+      label_file = self.getLabelFile(filename)
       if self.output_dir:
         label_file_without_path = osp.basename(label_file)
         label_file = osp.join(self.output_dir, label_file_without_path)
       item = QtWidgets.QListWidgetItem(osp.basename(filename))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
-        label_file
-      ):
+      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
         item.setCheckState(Qt.Checked)
       else:
         item.setCheckState(Qt.Unchecked)
