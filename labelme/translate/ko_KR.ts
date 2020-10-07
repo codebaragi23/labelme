@@ -31,6 +31,16 @@
         <translation>픽셀맵 보기</translation>
     </message>
     <message>
+        <location filename="../widgets/appearance_widget.py" line="21"/>
+        <source>Show groundtruth</source>
+        <translation>참값 보기</translation>
+    </message>
+    <message>
+        <location filename="../widgets/appearance_widget.py" line="24"/>
+        <source>Evaluation methods</source>
+        <translation>평가 방법</translation>
+    </message>
+    <message>
         <location filename="../widgets/appearance_widget.py" line="23"/>
         <source>Brightness</source>
         <translation>밝기</translation>
@@ -39,6 +49,19 @@
         <location filename="../widgets/appearance_widget.py" line="24"/>
         <source>Contrast</source>
         <translation>대조</translation>
+    </message>
+</context>
+<context>
+    <name>Canvas</name>
+    <message>
+        <location filename="../widgets/json_treeview.py" line="104"/>
+        <source>Key</source>
+        <translation>키</translation>
+    </message>
+    <message>
+        <location filename="../widgets/json_treeview.py" line="104"/>
+        <source>Value</source>
+        <translation>값</translation>
     </message>
 </context>
 <context>
@@ -57,6 +80,11 @@
         <location filename="../app.py" line="143"/>
         <source>Label List</source>
         <translation>레이블 목록</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="204"/>
+        <source>Annotator</source>
+        <translation>주석 작업자</translation>
     </message>
     <message>
         <location filename="../app.py" line="124"/>
@@ -125,8 +153,8 @@
     </message>
     <message>
         <location filename="../app.py" line="231"/>
-        <source>Open next (hold Ctl+Shift to copy labels)</source>
-        <translation>다음 열기 (Ctrl + Shift를 누른 상태에서 레이블 복사)</translation>
+        <source>Open next</source>
+        <translation>다음 열기</translation>
     </message>
     <message>
         <location filename="../app.py" line="239"/>
@@ -135,8 +163,8 @@
     </message>
     <message>
         <location filename="../app.py" line="239"/>
-        <source>Open prev (hold Ctl+Shift to copy labels)</source>
-        <translation>이전 열기 (Ctrl + Shift를 누른 상태에서 레이블 복사)</translation>
+        <source>Open previous</source>
+        <translation>이전 열기</translation>
     </message>
     <message>
         <location filename="../app.py" line="247"/>
@@ -524,6 +552,16 @@
         <translation>COCO 데이터셋 포맷으로 내보내기</translation>
     </message>
     <message>
+        <location filename="../app.py" line="619"/>
+        <source>&amp;AI auto</source>
+        <translation>AI 자동화(&amp;A)</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="619"/>
+        <source>Evaluation using AI automation engine</source>
+        <translation>AI 자동화 엔진을 이용한 평가</translation>
+    </message>
+    <message>
         <location filename="../app.py" line="640"/>
         <source>&amp;File</source>
         <translation>파일(&amp;F)</translation>
@@ -534,14 +572,19 @@
         <translation>편집(&amp;E)</translation>
     </message>
     <message>
+        <location filename="../app.py" line="640"/>
+        <source>&amp;View</source>
+        <translation>보기(&amp;V)</translation>
+    </message>
+    <message>
         <location filename="../app.py" line="709"/>
         <source>&amp;Dataset</source>
         <translation>데이터셋(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../app.py" line="640"/>
-        <source>&amp;View</source>
-        <translation>보기(&amp;V)</translation>
+        <location filename="../app.py" line="725"/>
+        <source>Ev&amp;aluation</source>
+        <translation>평가(&amp;A)</translation>
     </message>
     <message>
         <location filename="../app.py" line="640"/>

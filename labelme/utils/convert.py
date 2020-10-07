@@ -1,12 +1,16 @@
 import math
 import uuid
+import re
 
 import numpy as np
 import PIL.Image
 import PIL.ImageDraw
 
 from labelme.logger import logger
+from labelme.annotation import Annotation
+from labelme import PY2
 
+from qtpy import QtCore
 
 def polygons_to_mask(img_shape, polygons, shape_type=None):
   logger.warning(
@@ -89,3 +93,41 @@ def masks_to_bboxes(masks):
     bboxes.append((y1, x1, y2, x2))
   bboxes = np.asarray(bboxes, dtype=np.float32)
   return bboxes
+
+
+def annotation_to_dict(annotation):
+  data = annotation.other_data.copy()
+  data.update(
+    dict(
+      label=annotation.label.encode("utf-8") if PY2 else annotation.label,
+      shape_type=annotation.shape_type,
+      points=[(p.x(), p.y()) for p in annotation.points],
+      group_id=annotation.group_id,
+      flags=annotation.flags,
+    )
+  )
+  return data
+
+def dict_to_annotation(annotation, default_flags=None):
+  label = annotation["label"]
+  shape_type = annotation["shape_type"]
+  points = annotation["points"]
+  flags = annotation["flags"]
+  group_id = annotation["group_id"]
+  other_data = annotation["other_data"]
+  annotation = Annotation(label=label, shape_type=shape_type, group_id=group_id)
+  for x, y in points:
+    annotation.addPoint(QtCore.QPointF(x, y))
+  annotation.close()
+
+  default_matched_flags = {}
+  if default_flags:
+    for pattern, keys in default_flags.items():
+      if re.match(pattern, label):
+        for key in keys:
+          default_matched_flags[key] = False
+  annotation.flags = default_matched_flags
+  annotation.flags.update(flags)
+  annotation.other_data = other_data
+
+  return annotation

@@ -9,15 +9,12 @@ import labelme.utils
 
 # TODO(unknown):
 # - [opt] Store paths instead of creating new ones at each paint.
-
-
 DEFAULT_LINE_COLOR = QtGui.QColor(0, 255, 0, 128)  # bf hovering
 DEFAULT_FILL_COLOR = QtGui.QColor(0, 255, 0, 128)  # hovering
 DEFAULT_SELECT_LINE_COLOR = QtGui.QColor(255, 255, 255)  # selected
 DEFAULT_SELECT_FILL_COLOR = QtGui.QColor(0, 255, 0, 155)  # selected
 DEFAULT_VERTEX_FILL_COLOR = QtGui.QColor(0, 255, 0, 255)  # hovering
 DEFAULT_HVERTEX_FILL_COLOR = QtGui.QColor(255, 255, 255, 255)  # hovering
-
 
 class Annotation(object):
 
@@ -177,6 +174,7 @@ class Annotation(object):
         self.select_line_color if self.selected else self.line_color
       )
       pen = QtGui.QPen(color)
+
       # Try using integer sizes for smoother drawing(?)
       pen.setWidth(max(1, int(round(2.0 / self.scale))))
       painter.setPen(pen)
@@ -184,27 +182,15 @@ class Annotation(object):
       painter.drawPath(vrtx_path)
       painter.fillPath(vrtx_path, self._vertex_fill_color)
       if self.fill:
-        color = (
-          self.select_fill_color
-          if self.selected
-          else self.fill_color
-        )
-        painter.fillPath(line_path, color)
+        brush = QtGui.QBrush(QtCore.Qt.Dense7Pattern)
+        brush.setColor(color)
+        painter.fillPath(line_path, brush)
 
   def paint_pixelmap(self, painter):
     if self.points:
       line_path, vrtx_path = self.prepare_paint()
       color = (
-        self.select_line_color if self.selected else self.line_color
-      )
-      pen = QtGui.QPen(color)
-      # Try using integer sizes for smoother drawing(?)
-      pen.setWidth(max(1, int(round(2.0 / self.scale))))
-      painter.setPen(pen)
-      color = (
-        self.select_fill_color
-        if self.selected
-        else self.fill_color
+        self.select_fill_color if self.selected else self.fill_color
       )
       painter.fillPath(line_path, color)
 

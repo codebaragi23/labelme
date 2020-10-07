@@ -23,7 +23,7 @@ def main():
   parser.add_argument(
     "--version", "-V", action="store_true", help="show version"
   )
-  parser.add_argument(
+  parser.add_argument(\
     "--reset-config", action="store_true", help="reset qt config"
   )
   parser.add_argument(

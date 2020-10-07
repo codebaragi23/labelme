@@ -1,11 +1,33 @@
 import base64
 import io
 
+import os
+import os.path as osp
+
 import numpy as np
+
 import PIL.ExifTags
 import PIL.Image
 import PIL.ImageOps
 
+from qtpy import QtGui
+
+def scan_all_images(folderPath):
+    extensions = [
+      ".%s" % fmt.data().decode().lower()
+      for fmt in QtGui.QImageReader.supportedImageFormats()
+    ]
+
+    # images = []
+    # for root, dirs, files in os.walk(folderPath):
+    #   for file in files:
+    #     if file.lower().endswith(tuple(extensions)):
+    #       relativePath = osp.join(root, file)
+    #       images.append(relativePath)
+    files = os.listdir(folderPath)
+    images = [osp.join(folderPath, file) for file in files if file.lower().endswith(tuple(extensions))]
+    images.sort(key=lambda x: x.lower())
+    return images
 
 def img_data_to_pil(img_data):
   f = io.BytesIO()
