@@ -25,3 +25,9 @@ del sys
 from labelme.label_file import LabelFile
 from labelme import testing
 from labelme import utils
+from labelme import eval
+import numpy as np
+
+a = np.zeros((5,5), dtype='uint8')
+b = np.zeros((5,5), dtype='uint8')
+eval.pixel_accuracy(a, b)

@@ -4,12 +4,20 @@ from qtpy import QtWidgets
 
 from labelme import QT5
 from labelme.annotation import Annotation
-import labelme.utils
+from labelme.widgets import AppearanceWidget
 
+import labelme.utils
+import labelme.eval
+
+import cv2
+import numpy as np
 
 # TODO(unknown):
 # - [maybe] Find optimal epsilon value.
 
+
+DEFAULT_TEXT_COLOR = QtGui.QColor(0, 0, 0)
+DEFAULT_TEXT_BACKGROUND_COLOR = QtGui.QColor(128, 128, 128, 156)
 
 CURSOR_DEFAULT = QtCore.Qt.ArrowCursor
 CURSOR_POINT = QtCore.Qt.PointingHandCursor
@@ -48,7 +56,10 @@ class Canvas(QtWidgets.QWidget):
     # Initialise local state.
     self.mode = self.EDIT
     self.show_pixelmap = False
+    self.show_groundtruth = True
     self.annotations = []
+    self.groundtruth = []
+    self.eval_method = AppearanceWidget.EVAL_PIXEL_ACCURACY
     self.annotationsBackups = []
     self.current = None
     self.selectedAnnotations = []  # save the selected annotations here
@@ -89,6 +100,10 @@ class Canvas(QtWidgets.QWidget):
 
   def setFillDrawing(self, value):
     self._fill_drawing = value
+
+  def setEvalMethod(self, method):
+    self.eval_method = method
+    self.repaint()
 
   @property
   def createMode(self):
@@ -556,6 +571,56 @@ class Canvas(QtWidgets.QWidget):
 
     p.drawPixmap(0, 0, self.pixmap)
     Annotation.scale = self.scale
+    if self.show_groundtruth and len(self.groundtruth)>0:
+      for gt in self.groundtruth:
+        gt.paint_pixelmap(p)
+
+      eval = np.zeros((self.pixmap.height(), self.pixmap.width(), 3), np.uint8)
+      for annotation in self.annotations:
+        if annotation.label in ["__ignore__", "background"]: continue
+        points = []
+        for pt in annotation.points: points.append([pt.x(), pt.y()])
+        
+        points = np.array(points, np.int32)
+        cv2.fillPoly(eval, [points], annotation.fill_color.getRgb()[:3][::-1])
+      eval = cv2.cvtColor(eval, cv2.COLOR_BGR2GRAY)
+      #cv2.imwrite("map1.jpg", eval)
+
+      gt = np.zeros((self.pixmap.height(), self.pixmap.width(), 3), np.uint8)
+      for annotation in self.groundtruth:
+        if annotation.label in ["__ignore__", "background"]: continue
+        points = []
+        for pt in annotation.points: points.append([pt.x(), pt.y()])
+        
+        points = np.array(points, np.int32)
+        cv2.fillPoly(gt, [points], annotation.fill_color.getRgb()[:3][::-1])
+      gt = cv2.cvtColor(gt, cv2.COLOR_BGR2GRAY)
+      #cv2.imwrite("map2.jpg", gt)
+
+      p.setFont(QtGui.QFont('Consolas', 6))
+      p.setPen(QtGui.QColor(DEFAULT_TEXT_COLOR))
+
+      eval_text = ""
+      if self.eval_method == AppearanceWidget.EVAL_PIXEL_ACCURACY:
+        eval_val = labelme.eval.pixel_accuracy(eval, gt)
+        eval_text = " Pixel accuracy: %d%%" % round(eval_val*100)
+      elif self.eval_method == AppearanceWidget.EVAL_MEAN_ACCURACY:
+        eval_val = labelme.eval.mean_accuracy(eval, gt)
+        eval_text = " Mean accuracy: %d%%" % round(eval_val*100)
+      elif self.eval_method == AppearanceWidget.EVAL_MEAN_IU:
+        eval_val = labelme.eval.mean_IU(eval, gt)
+        eval_text = " Mean IU: %d%%" % round(eval_val*100)
+      elif self.eval_method == AppearanceWidget.EVAL_FREQUENCY_WEIGHTED_IU:
+        eval_val = labelme.eval.frequency_weighted_IU(eval, gt)
+        eval_text = " Frequency Weighted IU: %d%%" % round(eval_val*100)
+
+      fm = QtGui.QFontMetrics(p.font())
+      width = fm.width(eval_text)
+      textRect = QtCore.QRect(10, 10, width, 10)
+      p.fillRect(textRect, QtGui.QColor(DEFAULT_TEXT_BACKGROUND_COLOR))
+      p.drawText(textRect, QtCore.Qt.AlignVCenter, eval_text)
+      
+      
     for annotation in self.annotations:
       if self.show_pixelmap:
         annotation.paint_pixelmap(p)
@@ -579,7 +644,6 @@ class Canvas(QtWidgets.QWidget):
       drawing_annotation.addPoint(self.line[1])
       drawing_annotation.fill = True
       drawing_annotation.paint(p)
-
     p.end()
 
   def transformPos(self, point):
@@ -750,10 +814,8 @@ class Canvas(QtWidgets.QWidget):
       self.drawingPolygon.emit(False)
     self.repaint()
 
-  def loadPixmap(self, pixmap, clear_annotations=True):
+  def loadPixmap(self, pixmap):
     self.pixmap = pixmap
-    if clear_annotations:
-      self.annotations = []
     self.repaint()
 
   def loadAnnotations(self, annotations, replace=True):
@@ -783,5 +845,7 @@ class Canvas(QtWidgets.QWidget):
   def resetState(self):
     self.restoreCursor()
     self.pixmap = None
+    self.annotations = []
     self.annotationsBackups = []
     self.update()
+    self.groundtruth = []

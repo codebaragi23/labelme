@@ -11,6 +11,7 @@ termcolor
 tifffile
 imagecodecs
 lxml
+colordict
 
 # Geo ----------------------------------------
 geopandas

@@ -45,8 +45,8 @@ label_dock:
   closable: true
   movable: true
   floatable: true
-annot_dock:
-  show: true
+annotator_dock:
+  show: false
   closable: true
   movable: true
   floatable: true
@@ -75,8 +75,8 @@ shortcuts:
   save_to: null
   delete_file: Ctrl+Delete
 
-  open_next: [D, Ctrl+Shift+D]
-  open_prev: [A, Ctrl+Shift+A]
+  open_next: [Right, Ctrl+Shift+N]
+  open_prev: [Left, Ctrl+Shift+P]
 
   zoom_in: [Ctrl++, Ctrl+=]
   zoom_out: Ctrl+-
@@ -95,6 +95,6 @@ shortcuts:
   duplicate_annotation: Ctrl+D
   undo: Ctrl+Z
   undo_last_point: [Ctrl+Z, Backspace]
-  add_point_to_edge: Ctrl+Shift+P
+  add_point_to_edge: Ctrl+Shift+A
   edit_label: Ctrl+E
   toggle_keep_prev_mode: Ctrl+K
