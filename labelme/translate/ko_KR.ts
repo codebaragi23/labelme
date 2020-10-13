@@ -54,12 +54,12 @@
 <context>
     <name>Canvas</name>
     <message>
-        <location filename="../widgets/json_treeview.py" line="104"/>
+        <location filename="../widgets/json_treeview.py" line="7"/>
         <source>Key</source>
         <translation>키</translation>
     </message>
     <message>
-        <location filename="../widgets/json_treeview.py" line="104"/>
+        <location filename="../widgets/json_treeview.py" line="7"/>
         <source>Value</source>
         <translation>값</translation>
     </message>
@@ -153,8 +153,8 @@
     </message>
     <message>
         <location filename="../app.py" line="231"/>
-        <source>Open next</source>
-        <translation>다음 열기</translation>
+        <source>Open next image</source>
+        <translation>다음 이미지 열기</translation>
     </message>
     <message>
         <location filename="../app.py" line="239"/>
@@ -163,8 +163,8 @@
     </message>
     <message>
         <location filename="../app.py" line="239"/>
-        <source>Open previous</source>
-        <translation>이전 열기</translation>
+        <source>Open previous image</source>
+        <translation>이전 이미지 열기</translation>
     </message>
     <message>
         <location filename="../app.py" line="247"/>
@@ -377,12 +377,22 @@
         <translation>선택한 다각형 복제 생성</translation>
     </message>
     <message>
-        <location filename="../app.py" line="390"/>
+        <location filename="../app.py" line="414"/>
+        <source>Undo</source>
+        <translation>실행 취소</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="414"/>
+        <source>Undo last add and edit of annotation</source>
+        <translation>주석의 마지막 추가 및 편집 실행 취소</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="445"/>
         <source>Undo last point</source>
         <translation>마지막 점 실행 취소</translation>
     </message>
     <message>
-        <location filename="../app.py" line="390"/>
+        <location filename="../app.py" line="449"/>
         <source>Undo last drawn point</source>
         <translation>마지막으로 그린 점 실행 취소</translation>
     </message>
@@ -405,16 +415,6 @@
         <location filename="../app.py" line="454"/>
         <source>Remove selected point from polygon</source>
         <translation>다각형에서 선택한 점 삭제</translation>
-    </message>
-    <message>
-        <location filename="../app.py" line="414"/>
-        <source>Undo</source>
-        <translation>실행 취소</translation>
-    </message>
-    <message>
-        <location filename="../app.py" line="414"/>
-        <source>Undo last add and edit of shape</source>
-        <translation>모양의 마지막 추가 및 편집 실행 취소</translation>
     </message>
     <message>
         <location filename="../app.py" line="423"/>
@@ -560,6 +560,46 @@
         <location filename="../app.py" line="619"/>
         <source>Evaluation using AI automation engine</source>
         <translation>AI 자동화 엔진을 이용한 평가</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="629"/>
+        <source>Next image after evaluation</source>
+        <translation>평가 후 다음 이미지</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="631"/>
+        <source>Open next image after evaluation</source>
+        <translation>평가 후 다음 이미지 열기</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="639"/>
+        <source>Pass</source>
+        <translation>통과</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="641"/>
+        <source>Pass evaluation</source>
+        <translation>평가 통과</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="645"/>
+        <source>Fail</source>
+        <translation>탈락</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="647"/>
+        <source>Fail evaluation</source>
+        <translation>평가 탈락</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="651"/>
+        <source>Evaluation</source>
+        <translation>평가</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="654"/>
+        <source>Set evaluation result</source>
+        <translation>평가 결과 설정</translation>
     </message>
     <message>
         <location filename="../app.py" line="640"/>

@@ -112,6 +112,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self._noSelectionSlot = False
 
+    self.workerFile = None
+
     # Main widgets and related state.
     self.labelDialog = LabelDialog(
       parent=self,
@@ -203,7 +205,6 @@ class MainWindow(QtWidgets.QMainWindow):
     self.label_dock.setWidget(labelListWidget)
 
     self.annotatorInfosWidget = QJsonTreeWidget()
-    self.annotatorInfosWidget
     self.annotator_dock = QtWidgets.QDockWidget(self.tr(u"Annotator"), self)
     self.annotator_dock.setObjectName(u"Annotator")
     self.annotator_dock.setWidget(self.annotatorInfosWidget)
@@ -323,7 +324,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     saveAuto = action(
       text=self.tr("Save &Automatically"),
-      slot=lambda x: self.actions.saveAuto.setChecked(x),
+      #slot=lambda x: self.actions.saveAuto.setChecked(x),
       icon="save",
       tip=self.tr("Save automatically"),
       checkable=True,
@@ -340,7 +341,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
 
     changeOutputDir = action(
-      self.tr("Change &Output Dir"),
+      text=self.tr("Change &Output Dir"),
       slot=self.onChangeOutputDir,
       shortcut=shortcuts["save_to"],
       icon="open",
@@ -348,96 +349,84 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     
     changeLanguage = action(
-      self.tr("Change &Language"),
+      text=self.tr("Change &Language"),
       slot=self.onChangeLanguage,
       icon="translate",
       tip=self.tr(u"Change display language"),
     )
 
     close = action(
-      self.tr("&Close"),
-      self.closeFileDir,
-      shortcuts["close"],
-      "close",
-      self.tr("Close current file or directory"),
+      text=self.tr("&Close"),
+      slot=self.closeFileDir,
+      shortcut=shortcuts["close"],
+      icon="close",
+      tip=self.tr("Close current file or directory"),
     )
 
     toggle_keep_prev_mode = action(
-      self.tr("Keep Previous Annotation"),
-      self.toggleKeepPrevMode,
-      shortcuts["toggle_keep_prev_mode"],
-      None,
-      self.tr('Toggle "keep pevious annotation" mode'),
+      text=self.tr("Keep Previous Annotation"),
+      slot=self.toggleKeepPrevMode,
+      shortcut=shortcuts["toggle_keep_prev_mode"],
+      tip=self.tr('Toggle "keep pevious annotation" mode'),
       checkable=True,
     )
     toggle_keep_prev_mode.setChecked(self._config["keep_prev"])
 
     createPolyMode = action(
-      self.tr("Create Polygons"),
-      lambda: self.toggleDrawMode(False, createMode="polygon"),
-      shortcuts["create_polygon"],
-      "objects",
-      self.tr("Start drawing polygons"),
+      text=self.tr("Create Polygons"),
+      slot=lambda: self.toggleDrawMode(self.actions.createPolyMode),
+      shortcut=shortcuts["create_polygon"],
+      icon="polygon",
+      tip=self.tr("Start drawing polygons"),
       enabled=False,
+      checkable=True,
     )
     createRectangleMode = action(
-      self.tr("Create Rectangle"),
-      lambda: self.toggleDrawMode(False, createMode="rectangle"),
-      shortcuts["create_rectangle"],
-      "objects",
-      self.tr("Start drawing rectangles"),
+      text=self.tr("Create Rectangle"),
+      slot=lambda: self.toggleDrawMode(self.actions.createRectangleMode),
+      shortcut=shortcuts["create_rectangle"],
+      icon="rectangle",
+      tip=self.tr("Start drawing rectangles"),
       enabled=False,
+      checkable=True,
     )
     createCircleMode = action(
-      self.tr("Create Circle"),
-      lambda: self.toggleDrawMode(False, createMode="circle"),
-      shortcuts["create_circle"],
-      "objects",
-      self.tr("Start drawing circles"),
+      text=self.tr("Create Circle"),
+      slot=lambda: self.toggleDrawMode(self.actions.createCircleMode),
+      shortcut=shortcuts["create_circle"],
+      icon="circle",
+      tip=self.tr("Start drawing circles"),
       enabled=False,
+      checkable=True,
     )
     createLineMode = action(
-      self.tr("Create Line"),
-      lambda: self.toggleDrawMode(False, createMode="line"),
-      shortcuts["create_line"],
-      "objects",
-      self.tr("Start drawing lines"),
+      text=self.tr("Create Line"),
+      slot=lambda: self.toggleDrawMode(self.actions.createLineMode),
+      shortcut=shortcuts["create_line"],
+      icon="line",
+      tip=self.tr("Start drawing lines"),
       enabled=False,
+      checkable=True,
     )
     createPointMode = action(
-      self.tr("Create Point"),
-      lambda: self.toggleDrawMode(False, createMode="point"),
-      shortcuts["create_point"],
-      "objects",
-      self.tr("Start drawing points"),
+      text=self.tr("Create Point"),
+      slot=lambda: self.toggleDrawMode(self.actions.createPointMode),
+      shortcut=shortcuts["create_point"],
+      icon="point",
+      tip=self.tr("Start drawing points"),
       enabled=False,
+      checkable=True,
     )
     createLineStripMode = action(
-      self.tr("Create LineStrip"),
-      lambda: self.toggleDrawMode(False, createMode="linestrip"),
-      shortcuts["create_linestrip"],
-      "objects",
-      self.tr("Start drawing linestrip (Ctrl+LeftClick ends creation)"),
+      text=self.tr("Create LineStrip"),
+      slot=lambda: self.toggleDrawMode(self.actions.createLineStripMode),
+      shortcut=shortcuts["create_linestrip"],
+      icon="line_strip",
+      tip=self.tr("Start drawing linestrip (Ctrl+LeftClick ends creation)"),
       enabled=False,
+      checkable=True,
     )
 
-    editMode = action(
-      text=self.tr("Edit Annotations"),
-      slot=self.onEditAnnotation,
-      shortcut=shortcuts["edit_annotation"],
-      icon="edit",
-      tip=self.tr("Move and edit the selected annotations"),
-      enabled=False,
-    )
-
-    delete = action(
-      text=self.tr("Delete Annotations"),
-      slot=self.onDeleteSelectedAnnotation,
-      shortcut=shortcuts["delete_annotation"],
-      icon="cancel",
-      tip=self.tr("Delete the selected annotations"),
-      enabled=False,
-    )
     copy = action(
       text=self.tr("Duplicate Annotations"),
       slot=self.copySelectedAnnotation,
@@ -446,14 +435,32 @@ class MainWindow(QtWidgets.QMainWindow):
       tip=self.tr("Create a duplicate of the selected annotations"),
       enabled=False,
     )
-    undoLastPoint = action(
-      self.tr("Undo last point"),
-      self.canvas.undoLastPoint,
-      shortcuts["undo_last_point"],
-      "undo",
-      self.tr("Undo last drawn point"),
+    delete = action(
+      text=self.tr("Delete Annotations"),
+      slot=self.onDeleteSelectedAnnotation,
+      shortcut=shortcuts["delete_annotation"],
+      icon="cancel",
+      tip=self.tr("Delete the selected annotations"),
       enabled=False,
     )
+
+    undo = action(
+      self.tr("Undo"),
+      self.undoAnnotationEdit,
+      shortcuts["undo"],
+      "undo",
+      self.tr("Undo last add and edit of annotation"),
+      enabled=False,
+    )
+    undoLastPoint = action(
+      text=self.tr("Undo last point"),
+      slot=self.canvas.undoLastPoint,
+      shortcut=shortcuts["undo_last_point"],
+      icon="undo",
+      tip=self.tr("Undo last drawn point"),
+      enabled=False,
+    )
+
     addPointToEdge = action(
       text=self.tr("Add Point to Edge"),
       slot=self.canvas.addPointToEdge,
@@ -467,15 +474,6 @@ class MainWindow(QtWidgets.QMainWindow):
       slot=self.canvas.removeSelectedPoint,
       icon="edit",
       tip=self.tr("Remove selected point from polygon"),
-      enabled=False,
-    )
-
-    undo = action(
-      self.tr("Undo"),
-      self.undoAnnotationEdit,
-      shortcuts["undo"],
-      "undo",
-      self.tr("Undo last add and edit of annotation"),
       enabled=False,
     )
 
@@ -620,11 +618,42 @@ class MainWindow(QtWidgets.QMainWindow):
       enabled=False,
     )
 
-    inspectAuto = action(
+    evalAuto = action(
       self.tr("&AI auto"),
-      slot=self.onInspectAI,
+      slot=self.onEvalAI,
       icon="ai",
       tip=self.tr("Evaluation using AI automation engine"),
+      enabled=False,
+      checkable=True,
+    )
+
+    openNextImageAfterEval = action(
+      text=self.tr("Next image after evaluation"),
+      slot=self.onEnableOpenNextImageAfterEval,
+      tip=self.tr("Open next image after evaluation"),
+      checkable=True,
+      checked=self._config["auto_open_next_eval"],
+    )
+
+    evalPass = action(
+      text=self.tr("Pass"),
+      slot=lambda: self.onEvalJudgement(True),
+      tip=self.tr("Pass evaluation"),
+      enabled=False,
+    )
+
+    evalFail = action(
+      text=self.tr("Fail"),
+      slot=lambda: self.onEvalJudgement(False),
+      tip=self.tr("Fail evaluation"),
+      enabled=False,
+    )
+
+    evalCheck = action(
+      self.tr("Evaluation"),
+      slot=lambda: self.onEvalJudgement(True if self.evalResCombo.currentIndex()==0 else False),
+      icon="evaluation",
+      tip=self.tr("Set evaluation result"),
       enabled=False,
     )
 
@@ -654,13 +683,14 @@ class MainWindow(QtWidgets.QMainWindow):
       undo=undo,
       addPointToEdge=addPointToEdge,
       removePoint=removePoint,
+
       createPolyMode=createPolyMode,
-      editMode=editMode,
       createRectangleMode=createRectangleMode,
       createCircleMode=createCircleMode,
       createLineMode=createLineMode,
       createPointMode=createPointMode,
       createLineStripMode=createLineStripMode,
+
       zoom=zoom,
       zoomIn=zoomIn,
       zoomOut=zoomOut,
@@ -672,6 +702,16 @@ class MainWindow(QtWidgets.QMainWindow):
       openPrevImg=openPrevImg,
       fileMenuActions=(open_, opendir, save, saveAs, close, quit),
       tool=(),
+      
+      annotOperations=(
+        createPolyMode,
+        createRectangleMode,
+        createCircleMode,
+        createLineMode,
+        createPointMode,
+        createLineStripMode,
+      ),
+
       # XXX: need to add some actions here to activate the shortcut
       editMenu=(
         edit,
@@ -693,12 +733,14 @@ class MainWindow(QtWidgets.QMainWindow):
         createLineMode,
         createPointMode,
         createLineStripMode,
-        editMode,
+        None,
         edit,
         copy,
         delete,
+        None,
         undo,
         undoLastPoint,
+        None,
         addPointToEdge,
         removePoint,
       ),
@@ -710,7 +752,6 @@ class MainWindow(QtWidgets.QMainWindow):
         createLineMode,
         createPointMode,
         createLineStripMode,
-        editMode,
       ),
       onAnnotationsPresent=(saveAs, hideAll, showAll),
       exportDetectMenu=(
@@ -722,7 +763,15 @@ class MainWindow(QtWidgets.QMainWindow):
         exportCOCO,
       ),
 
-      inspectAuto = inspectAuto
+      evalAuto = evalAuto,
+      openNextImageAfterEval = openNextImageAfterEval,
+      evalTools = (
+        evalAuto,
+        evalPass,
+        evalFail,
+        evalCheck,
+        openNextImageAfterEval,
+      ),
     )
 
     self.canvas.edgeSelected.connect(self.canvasAnnotationEdgeSelected)
@@ -817,7 +866,11 @@ class MainWindow(QtWidgets.QMainWindow):
     utils.addActions(
       self.menus.evaluation,
       (
-        inspectAuto,
+        evalAuto,
+        evalPass,
+        evalFail,
+        None,
+        openNextImageAfterEval,
       ),
     )
 
@@ -835,14 +888,24 @@ class MainWindow(QtWidgets.QMainWindow):
       ),
     )
 
+    self.action_to_shape = {
+      self.actions.createPolyMode : "polygon",
+      self.actions.createRectangleMode : "rectangle",
+      self.actions.createCircleMode : "circle",
+      self.actions.createLineMode : "line",
+      self.actions.createPointMode : "point",
+      self.actions.createLineStripMode : "linestrip",
+    }
+
     # Menu buttons on Left
     self.actions.annotTool = (
-      open_,
-      opendir,
-      save,
-      None,
       createPolyMode,
-      editMode,
+      createRectangleMode,
+      createCircleMode,
+      createLineMode, 
+      createPointMode,
+      createLineStripMode,
+      None,
       copy,
       delete,
       undo,
@@ -850,12 +913,27 @@ class MainWindow(QtWidgets.QMainWindow):
       zoom,
       fitWidth,
       None,
-      inspectAuto,
+      evalAuto,
     )
 
-    self.actions.switchTool = (
+    self.actions.filemenuTool = (
+      open_,
+      opendir,
+      save,
+    )
+
+    self.actions.filemenuTool = (
+      open_,
+      opendir,
+      save,
+    )
+    self.actions.playTool = (
       openPrevImg,
       openNextImg,
+    )
+
+    self.actions.evalTool = (
+      evalCheck,
     )
 
     self.statusBar().showMessage(self.tr("%s started.") % __appname__)
@@ -923,25 +1001,56 @@ class MainWindow(QtWidgets.QMainWindow):
     self.zoomWidget.valueChanged.connect(self.paintCanvas)
 
     # Toolbars
-    toolbar = ToolBar("annotTools")
-    toolbar.setObjectName("annotTools-ToolBar")
-    toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
     if self.actions.annotTool:
+      toolbar = ToolBar("annotTools")
+      toolbar.setObjectName("annotTools-ToolBar")
+      toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
+      # size = toolbar.iconSize()
+      # size.setWidth(size.width()*1.5)
+      # toolbar.setIconSize(size)
       utils.addActions(toolbar, self.actions.annotTool)
-    self.addToolBar(Qt.LeftToolBarArea, toolbar)
+      self.addToolBar(Qt.LeftToolBarArea, toolbar)
 
-    toolbar = ToolBar("switchTools")
-    toolbar.setObjectName("switchTools-ToolBar")
-    spacer = QtWidgets.QWidget()
-    spacer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-    toolbar.addWidget(spacer)
-    if self.actions.switchTool:
-      utils.addActions(toolbar, self.actions.switchTool)
-    spacer = QtWidgets.QWidget()
-    spacer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-    toolbar.addWidget(spacer)
-    toolbar.setStyleSheet("QToolButton { padding-left: 20px; padding-right: 20px; }")
-    self.addToolBar(Qt.BottomToolBarArea, toolbar)
+    if self.actions.filemenuTool:
+      toolbar = ToolBar("filemenuTool")
+      toolbar.setObjectName("filemenuTool-ToolBar")
+      toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
+      toolbar.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+      utils.addActions(toolbar, self.actions.filemenuTool)
+      self.addToolBar(Qt.TopToolBarArea, toolbar)
+
+    if self.actions.playTool:
+      toolbar = ToolBar("playTool")
+      toolbar.setObjectName("playTool-ToolBar")
+      toolbar.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
+      spacer = QtWidgets.QWidget()
+      spacer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+      toolbar.addWidget(spacer)
+      utils.addActions(toolbar, self.actions.playTool)
+      spacer = QtWidgets.QWidget()
+      spacer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+      toolbar.addWidget(spacer)
+      
+      toolbar.setStyleSheet("QToolButton { padding-left: 40px; padding-right: 40px; }")
+      self.addToolBar(Qt.TopToolBarArea, toolbar)
+
+    if self.actions.evalTool:
+      toolbar = ToolBar("evalTool")
+      toolbar.setObjectName("evalTool-ToolBar")
+      toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
+
+      self.evalResCombo = QtWidgets.QComboBox()
+      self.evalResCombo.addItem(self.tr("Pass"))
+      self.evalResCombo.addItem(self.tr("Fail"))
+      self.evalResCombo.setEnabled(False)
+      toolbar.addWidget(self.evalResCombo)
+      self.actions.evalTools = self.actions.evalTools + tuple([self.evalResCombo])
+      self.evalResCombo.setToolTip(self.tr("Check evaluation result"))
+
+      utils.addActions(toolbar, self.actions.evalTool)
+      toolbar.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+      self.addToolBar(Qt.TopToolBarArea, toolbar)
 
     self.populateModeActions()
 
@@ -964,16 +1073,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.canvas.menus[0].clear()
     utils.addActions(self.canvas.menus[0], menu)
     self.menus.edit.clear()
-    actions = (
-      self.actions.createPolyMode,
-      self.actions.createRectangleMode,
-      self.actions.createCircleMode,
-      self.actions.createLineMode,
-      self.actions.createPointMode,
-      self.actions.createLineStripMode,
-      self.actions.editMode,
-    )
-    utils.addActions(self.menus.edit, actions + self.actions.editMenu)
+    utils.addActions(self.menus.edit, self.actions.annotOperations + self.actions.editMenu)
 
   def setDirty(self):
     if self._config["auto_save"] or self.actions.saveAuto.isChecked():
@@ -995,13 +1095,10 @@ class MainWindow(QtWidgets.QMainWindow):
   def setClean(self):
     self.dirty = False
     self.actions.save.setEnabled(False)
-    self.actions.createPolyMode.setEnabled(True)
-    self.actions.createRectangleMode.setEnabled(True)
-    self.actions.createCircleMode.setEnabled(True)
-    self.actions.createLineMode.setEnabled(True)
-    self.actions.createPointMode.setEnabled(True)
-    self.actions.createLineStripMode.setEnabled(True)
-    self.actions.inspectAuto.setEnabled(True)
+
+    for action in self.actions.annotOperations + self.actions.evalTools:
+      action.setEnabled(True)
+
     title = __appname__
     if self.filename is not None:
       title = "{} - {}".format(title, self.filename)
@@ -1018,9 +1115,9 @@ class MainWindow(QtWidgets.QMainWindow):
     """Enable/Disable widgets which depend on an opened image."""
     for z in self.actions.zoomActions:
       z.setEnabled(value)
-    for action in self.actions.onLoadActive:
+
+    for action in self.actions.onLoadActive + self.actions.evalTools:
       action.setEnabled(value)
-    self.actions.inspectAuto.setEnabled(value)
 
   def canvasAnnotationEdgeSelected(self, selected, annotation):
     self.actions.addPointToEdge.setEnabled(
@@ -1040,6 +1137,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.imagePath = None
     self.imageData = None
     self.labelFile = None
+    self.workerFile = None
     self.otherData = None
     self.canvas.resetState()
     self.annotatorInfosWidget.clear()
@@ -1074,76 +1172,30 @@ class MainWindow(QtWidgets.QMainWindow):
 
     In the middle of drawing, toggling between modes should be disabled.
     """
-    self.actions.editMode.setEnabled(not drawing)
     self.actions.undoLastPoint.setEnabled(drawing)
     self.actions.undo.setEnabled(not drawing)
     self.actions.delete.setEnabled(not drawing)
 
-  def toggleDrawMode(self, edit=True, createMode="polygon"):
-    self.canvas.setEditing(edit)
-    self.canvas.createPolyMode = createMode
-    if edit:
-      self.actions.createPolyMode.setEnabled(True)
-      self.actions.createRectangleMode.setEnabled(True)
-      self.actions.createCircleMode.setEnabled(True)
-      self.actions.createLineMode.setEnabled(True)
-      self.actions.createPointMode.setEnabled(True)
-      self.actions.createLineStripMode.setEnabled(True)
-    else:
-      if createMode == "polygon":
-        self.actions.createPolyMode.setEnabled(False)
-        self.actions.createRectangleMode.setEnabled(True)
-        self.actions.createCircleMode.setEnabled(True)
-        self.actions.createLineMode.setEnabled(True)
-        self.actions.createPointMode.setEnabled(True)
-        self.actions.createLineStripMode.setEnabled(True)
-        for action in self.actions.exportSegMenu:
-          action.setEnabled(True)
-      elif createMode == "rectangle":
-        self.actions.createPolyMode.setEnabled(True)
-        self.actions.createRectangleMode.setEnabled(False)
-        self.actions.createCircleMode.setEnabled(True)
-        self.actions.createLineMode.setEnabled(True)
-        self.actions.createPointMode.setEnabled(True)
-        self.actions.createLineStripMode.setEnabled(True)
-        for action in self.actions.exportDetectMenu:
-          action.setEnabled(True)
-      elif createMode == "line":
-        self.actions.createPolyMode.setEnabled(True)
-        self.actions.createRectangleMode.setEnabled(True)
-        self.actions.createCircleMode.setEnabled(True)
-        self.actions.createLineMode.setEnabled(False)
-        self.actions.createPointMode.setEnabled(True)
-        self.actions.createLineStripMode.setEnabled(True)
-      elif createMode == "point":
-        self.actions.createPolyMode.setEnabled(True)
-        self.actions.createRectangleMode.setEnabled(True)
-        self.actions.createCircleMode.setEnabled(True)
-        self.actions.createLineMode.setEnabled(True)
-        self.actions.createPointMode.setEnabled(False)
-        self.actions.createLineStripMode.setEnabled(True)
-      elif createMode == "circle":
-        self.actions.createPolyMode.setEnabled(True)
-        self.actions.createRectangleMode.setEnabled(True)
-        self.actions.createCircleMode.setEnabled(False)
-        self.actions.createLineMode.setEnabled(True)
-        self.actions.createPointMode.setEnabled(True)
-        self.actions.createLineStripMode.setEnabled(True)
-        for action in self.actions.exportDetectMenu:
-          action.setEnabled(True)
-      elif createMode == "linestrip":
-        self.actions.createPolyMode.setEnabled(True)
-        self.actions.createRectangleMode.setEnabled(True)
-        self.actions.createCircleMode.setEnabled(True)
-        self.actions.createLineMode.setEnabled(True)
-        self.actions.createPointMode.setEnabled(True)
-        self.actions.createLineStripMode.setEnabled(False)
-      else:
-        raise ValueError("Unsupported createMode: %s" % createMode)
-    self.actions.editMode.setEnabled(not edit)
+  def toggleDrawMode(self, toggleAction):
+    edit=True
+    createMode=self.action_to_shape[toggleAction]
+    for action in self.actions.annotOperations:
+      if action != toggleAction:
+        action.setChecked(False)
+      if action.isChecked():
+        edit=False
 
-  def onEditAnnotation(self):
-    self.toggleDrawMode(True)
+    self.canvas.setEditing(edit)
+    self.canvas.createMode = createMode
+    if createMode == "polygon":
+      for action in self.actions.exportSegMenu:
+        action.setEnabled(True)
+    elif createMode == "rectangle":
+      for action in self.actions.exportDetectMenu:
+        action.setEnabled(True)
+    elif createMode == "circle":
+      for action in self.actions.exportDetectMenu:
+        action.setEnabled(True)
 
   def updateFileMenu(self):
     current = self.filename
@@ -1343,7 +1395,7 @@ class MainWindow(QtWidgets.QMainWindow):
       flags[key] = flag
     try:
       imagePath = osp.relpath(self.imagePath, osp.dirname(filename))
-      imageData = self.imageData if self._config["store_data"] else None
+      imageData = self.imageData if self.actions.saveWithImageData.isChecked() else None
       if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
         os.makedirs(osp.dirname(filename))
       lf.save(
@@ -1432,7 +1484,6 @@ class MainWindow(QtWidgets.QMainWindow):
       annotation = self.canvas.setLastLabel(text, flags)
       annotation.group_id = group_id
       self.addLabel(annotation)
-      self.actions.editMode.setEnabled(True)
       self.actions.undoLastPoint.setEnabled(False)
       self.actions.undo.setEnabled(True)
       self.setDirty()
@@ -1701,8 +1752,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.toggleActions(True)
     self.status(self.tr("Loaded %s") % osp.basename(str(filename)))
 
-    if self.actions.inspectAuto.isChecked():
-      self.onInspectAI()
+    if self.actions.evalAuto.isChecked():
+      self.onEvalAI()
     return True
 
   def resizeEvent(self, event):
@@ -1746,7 +1797,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def enableSaveImageWithData(self, enabled):
     self._config["store_data"] = enabled
-    self.actions.saveWithImageData.setChecked(enabled)
 
   def closeEvent(self, event):
     if not self.mayContinue():      event.ignore()
@@ -2443,7 +2493,14 @@ class MainWindow(QtWidgets.QMainWindow):
       list.append(osp.join(self.lastOpenDir, "../GT", item.text()))
     return list
 
-  def onInspectAI(self):
+  def onEvalAI(self):
+    if not self.actions.evalAuto.isChecked():
+      self.annotatorInfosWidget.clear()
+      self.appearance_widget.setEnabledEval(False)
+      self.canvas.groundtruth = []
+      self.canvas.repaint()
+      return
+    
     if len(self.imageList) > 0:
       label_file = osp.join(self.lastOpenDir, "../GT", self.getLabelFile(osp.basename(self.filename)))
       worker_file = osp.join(self.lastOpenDir, "worker.json")
@@ -2454,6 +2511,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if not osp.exists(label_file):
       return
     
+    self.workerFile = worker_file
     self.annotatorInfosWidget.loadJson(worker_file)
     self.annotator_dock.raise_()
     labelFile = LabelFile(label_file)
@@ -2464,6 +2522,31 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.appearance_widget.setEnabledEval(True)
     self.canvas.repaint()
+
+  def onEnableOpenNextImageAfterEval(self, enabled):
+    self._config["auto_open_next_eval"] = enabled
+
+  def onEvalJudgement(self, pass_):
+    if not self.workerFile: return
+    data = json.load(open(self.workerFile))
+    work = data["work"]
+    if pass_:
+      imname = osp.basename(self.filename)
+      if not imname in work["pass_images"]:
+        work["pass_images"].append(imname)
+        work["passed_num_images"] = len(work["pass_images"])
+    else:
+      imname = osp.basename(self.filename)
+      if imname in work["pass_images"]:
+        work["pass_images"].remove(imname)
+        work["passed_num_images"] = len(work["pass_images"])
+
+    with open(self.workerFile, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    self.annotatorInfosWidget.loadJson(self.workerFile)
+
+    if self.actions.openNextImageAfterEval.isChecked():
+      self.openNextImg()
 
   # Message Dialogs. #
   def hasLabels(self):
