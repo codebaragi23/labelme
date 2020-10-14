@@ -1912,6 +1912,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fileListWidget.clear()
       self.loadFile(filename)
 
+    if len(self.imageList) > 0:
+      worker_file = osp.join(self.lastOpenDir, "worker.json")
+    else:
+      worker_file = osp.join(osp.dirname(self.filename), "worker.json")
+    self.workerFile = worker_file
+    self.annotatorInfosWidget.loadJson(worker_file)
+    self.annotator_dock.raise_()
+
   def saveFile(self, _value=False):
     assert not self.image.isNull(), "cannot save empty image"
     if self.labelFile:
@@ -2495,7 +2503,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def onEvalAI(self):
     if not self.actions.evalAuto.isChecked():
-      self.annotatorInfosWidget.clear()
       self.appearance_widget.setEnabledEval(False)
       self.canvas.groundtruth = []
       self.canvas.repaint()
@@ -2503,17 +2510,12 @@ class MainWindow(QtWidgets.QMainWindow):
     
     if len(self.imageList) > 0:
       label_file = osp.join(self.lastOpenDir, "../GT", self.getLabelFile(osp.basename(self.filename)))
-      worker_file = osp.join(self.lastOpenDir, "worker.json")
     else:
       label_file = osp.join(osp.dirname(self.filename), "../GT", self.getLabelFile(osp.basename(self.filename)))
-      worker_file = osp.join(osp.dirname(self.filename), "worker.json")
 
     if not osp.exists(label_file):
       return
     
-    self.workerFile = worker_file
-    self.annotatorInfosWidget.loadJson(worker_file)
-    self.annotator_dock.raise_()
     labelFile = LabelFile(label_file)
     self.canvas.groundtruth = [utils.dict_to_annotation(annotation, self._config["label_flags"]) for annotation in labelFile.annotations]
     for gt in self.canvas.groundtruth:
