@@ -69,7 +69,7 @@ canvas:
 shortcuts:
   close: Ctrl+W
   open: Ctrl+O
-  open_dir: Ctrl+U
+  open_dir: Ctrl+K, Ctrl+O
   quit: Ctrl+Q
   save: Ctrl+S
   save_as: Ctrl+Shift+S
