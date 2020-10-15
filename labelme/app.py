@@ -1752,8 +1752,25 @@ class MainWindow(QtWidgets.QMainWindow):
     self.toggleActions(True)
     self.status(self.tr("Loaded %s") % osp.basename(str(filename)))
 
+    # auto-run evaluation
     if self.actions.evalAuto.isChecked():
       self.onEvalAI()
+
+    # set annotator widget
+    if len(self.imageList) > 0:
+      worker_file = osp.join(self.lastOpenDir, "worker.json")
+    else:
+      worker_file = osp.join(osp.dirname(self.filename), "worker.json")
+    if self.workerFile != worker_file:
+      if osp.exists(worker_file):
+        self.workerFile = worker_file
+        self.annotatorInfosWidget.loadJson(worker_file)
+        self.annotator_dock.raise_()
+      else:
+        self.workerFile = None
+        self.annotatorInfosWidget.clear()
+        self.file_dock.raise_()
+        
     return True
 
   def resizeEvent(self, event):
@@ -1911,14 +1928,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fileListPath.clear()
         self.fileListWidget.clear()
       self.loadFile(filename)
-
-    if len(self.imageList) > 0:
-      worker_file = osp.join(self.lastOpenDir, "worker.json")
-    else:
-      worker_file = osp.join(osp.dirname(self.filename), "worker.json")
-    self.workerFile = worker_file
-    self.annotatorInfosWidget.loadJson(worker_file)
-    self.annotator_dock.raise_()
 
   def saveFile(self, _value=False):
     assert not self.image.isNull(), "cannot save empty image"
