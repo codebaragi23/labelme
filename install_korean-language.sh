@@ -1,3 +1,4 @@
+apt-get update -qq && \
 apt-get install -qq -y \
      locales \
      language-pack-ko \

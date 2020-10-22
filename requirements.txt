@@ -7,18 +7,20 @@ imgviz>=0.11.0
 matplotlib
 numpy
 Pillow>=2.8.0
-PyYAML
+PyQt5
 qtpy
+PyYAML
 termcolor
 tifffile
 lxml
+imagecodecs
 colordict
 
-# Geo ----------------------------------------
+# # Geo ----------------------------------------
 geopandas
 pygeos
 
-# coco ----------------------------------------
+# # coco ----------------------------------------
 pycocotools>=2.0
 
 # export --------------------------------------

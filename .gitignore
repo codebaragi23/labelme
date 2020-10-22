@@ -10,5 +10,6 @@
 .DS_Store
 .idea/
 
-/examples/hyper/
+_temp/
+/examples/geo/
 /geo-codes/

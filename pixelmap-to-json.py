@@ -15,9 +15,9 @@ parser.add_argument('--epsilon', type=float, default=2.5, help='epsilon pixel to
 # parser.add_argument('--output', type=str, default="road.json", help='json output file')
 # parser.add_argument('--config', type=str, default="examples/hyper/Air_20200331/GT/config.json", help='config file content labels informations')
 
-parser.add_argument('--input', type=str, default="examples/inspection/GT", help='image mask input to compute all polygons')
-parser.add_argument('--output', type=str, default="road.json", help='json output file')
-parser.add_argument('--config', type=str, default="examples/inspection/GT/labels.json", help='config file content labels informations')
+parser.add_argument('--input', type=str, default="test2/", help='image mask input to compute all polygons')
+parser.add_argument('--output', type=str, default="xx.json", help='json output file')
+parser.add_argument('--config', type=str, default="test2/config.json", help='config file content labels informations')
 opt = parser.parse_args()
 
 def to_categorical(y, num_classes=None):
