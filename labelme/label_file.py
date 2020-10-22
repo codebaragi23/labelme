@@ -4,6 +4,7 @@ import io
 import json
 import os.path as osp
 
+import cv2
 import PIL.Image
 import tifffile
 
@@ -31,9 +32,9 @@ def open(name, mode):
 class LabelFileError(Exception):
   pass
 
-def LabelFileFromGeo(geo):
+def LabelFileFromGeo(geo, geo_transfrom):
   labelFile = LabelFile()
-  labelFile.fromGeo(geo)
+  labelFile.fromGeo(geo, geo_transfrom)
   return labelFile
 
 class LabelFile(object):
@@ -51,11 +52,12 @@ class LabelFile(object):
   def load_image_file(filename):
     ext = osp.splitext(filename)[1].lower()
 
+    import numpy as np
     try:
       if ext in [".tif", ".tiff"]:
         image = tifffile.imread(filename)
         image = image.astype("uint8")
-        image = image[:,:,:3]
+        #image = image[:,:,:3]
         image_pil = PIL.Image.fromarray(image)
       else:
         image_pil = PIL.Image.open(filename)
@@ -77,7 +79,7 @@ class LabelFile(object):
       f.seek(0)
       return f.read()
 
-  def fromGeo(self, data):
+  def fromGeo(self, data, geo_transfrom):
     keys = [
       "features",  # polygonal annotations
     ]
@@ -95,9 +97,21 @@ class LabelFile(object):
     # relative path from label file to relative path from cwd
     annotations = [
       dict(
-        label=feature["properties"]["작물ID"],
-        shape_type=feature["geometry"]["type"].lower(),
-        points=[[x, -y] for x, y in feature["geometry"]["coordinates"][0]],
+        # label=feature["properties"]["작물ID"],
+        # shape_type=feature["geometry"]["type"].lower(),
+        # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+
+        # t1
+        # label=str(feature["properties"]["속성"]),
+        # shape_type=feature["geometry"]["type"].lower(),
+        # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+
+        # t2
+        label=str(feature["properties"]["ann_name"]),
+        shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
+        points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0][0]],
+
+        
         flags=feature.get("flags", {}),
         group_id=feature.get("group_id", None),
         other_data={

@@ -1,25 +1,27 @@
-FROM ulikoehler/ubuntu-python3-opencv
+FROM codebaragi23/ubuntu18.04-python3.6.9:opencv4.2.0
 LABEL maintainer "codebaragi23 (codebaragi23@gmail.com)"
 
 COPY ./requirements.txt /requirements.txt
-ENV DEBIAN_FRONTEND=noninteractive
+COPY ./install_korean-language.sh /install_korean-language.sh
+
+ENV DEBIAN_FRONTEND noninteractive
+
 RUN \
   apt-get update -qq && \
   apt-get install -qq -y \
-    git \
-    python3-pip \
-    python3-matplotlib \
+    libgl1-mesa-glx \
     python3-pyqt5 \
-    python3-numpy \
-    && rm -rf /var/lib/apt/lists/*
+    python3-gdal \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN /bin/bash install_korean-language.sh
 
 RUN pip3 install -U -r requirements.txt
+# RUN rm /requirements.txt
+# RUN pip3 install -v git+https://github.com/codebaragi23/labelme.git
 
-RUN pip3 install -v git+https://github.com/codebaragi23/labelme.git
+RUN mkdir /root/workspace
+# ENV LANG en-US
 
-RUN mkdir /root/workdir
-
-ENV LANG en-US
-
-WORKDIR /root/workdir
-ENTRYPOINT [ "labelme" ]
+WORKDIR /root/workspace
+# ENTRYPOINT [ "labelme" ]

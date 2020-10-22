@@ -28,15 +28,9 @@ def get_install_requires():
   PY2 = sys.version_info[0] == 2
   assert PY3 or PY2
 
-  install_requires = [
-    "imgviz>=0.11.0",
-    "matplotlib",
-    "numpy",
-    "Pillow>=2.8.0",
-    "PyYAML",
-    "qtpy",
-    "termcolor",
-  ]
+  with open('requirements.txt', 'r') as f:
+    list_file = f.readlines()
+  install_requires = [line.rstrip('\n') for line in list_file] 
 
   # Find python binding for qt with priority:
   # PyQt5 -> PySide2 -> PyQt4,

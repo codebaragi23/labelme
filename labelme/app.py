@@ -9,7 +9,7 @@ import re
 import webbrowser
 import numpy as np
 
-import geopandas
+import geopandas, gdal
 import collections
 import datetime
 import uuid
@@ -1655,12 +1655,28 @@ class MainWindow(QtWidgets.QMainWindow):
     geolabel = False
     if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
       self.labelFile, self.imagePath = self.load_labelfile(filename)
+    elif QtCore.QFile.exists(osp.splitext(filename)[0] + ".geojson"):
+      geo = geopandas.read_file(osp.splitext(filename)[0] + ".geojson", encoding='cp949')
+      geo = geo._to_geo(na="null", show_bbox=False)
+      
+      g = gdal.Open(filename)
+      geo_transfrom =  g.GetGeoTransform()
+      self.labelFile = LabelFileFromGeo(geo, geo_transfrom)
+      self.labelFile.imageData = LabelFile.load_image_file(filename)
+      self.labelFile.filename = label_file
+      self.labelFile.imagePath = filename
+      self.imagePath = filename
+      geolabel = True
     elif all(QtCore.QFile.exists(osp.splitext(filename)[0] + geo_file_ext) for geo_file_ext in [".dbf", ".shp", ".shx"]):
       dbf_file = geopandas.read_file(osp.splitext(filename)[0] + ".shp", encoding='cp949')
       geo = dbf_file._to_geo(na="null", show_bbox=False)
+
       #TODEBUG
-      #dbf_file.to_file(label_file.replace(".json", ".geojson"), driver='GeoJSON')
-      self.labelFile = LabelFileFromGeo(geo)
+      dbf_file.to_file(label_file.replace(".json", ".geojson"), driver='GeoJSON')
+      
+      g = gdal.Open(filename)
+      geo_transfrom =  g.GetGeoTransform()
+      self.labelFile = LabelFileFromGeo(geo, geo_transfrom)
       self.labelFile.imageData = LabelFile.load_image_file(filename)
       self.labelFile.filename = label_file
       self.labelFile.imagePath = filename
