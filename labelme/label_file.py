@@ -95,31 +95,79 @@ class LabelFile(object):
     ]
 
     # relative path from label file to relative path from cwd
-    annotations = [
-      dict(
-        # label=feature["properties"]["작물ID"],
-        # shape_type=feature["geometry"]["type"].lower(),
-        # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+    # annotations = [
+    #   dict(
+    #     # label=feature["properties"]["작물ID"],
+    #     # shape_type=feature["geometry"]["type"].lower(),
+    #     # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
 
-        # t1
-        # label=str(feature["properties"]["속성"]),
-        # shape_type=feature["geometry"]["type"].lower(),
-        # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+    #     # t1
+    #     # label=str(feature["properties"]["속성"]),
+    #     # shape_type=feature["geometry"]["type"].lower(),
+    #     # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
 
-        # t2
-        label=str(feature["properties"]["ann_name"]),
-        shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
-        points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0][0]],
+    #     # t2
+    #     # label=str(feature["properties"]["ann_name"]),
+    #     # shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
+    #     # #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+    #     # points=[[x, y] for x, y in feature["geometry"]["coordinates"][0]],
 
+    #     # t3
+    #     label=str(feature["properties"]["ann_name"]),
+    #     shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
+    #     points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
         
-        flags=feature.get("flags", {}),
-        group_id=feature.get("group_id", None),
-        other_data={
-          k:v for k, v in feature.items() if k not in annotation_keys
-        },
-      )
-      for feature in data["features"]
-    ]
+    #     flags=feature.get("flags", {}),
+    #     group_id=feature.get("group_id", None),
+    #     other_data={
+    #       k:v for k, v in feature.items() if k not in annotation_keys
+    #     },
+    #   )
+    #   for feature in data["features"]
+    # ]
+
+    annotations = []
+    for feature in data["features"]:
+      if feature["geometry"]["type"].lower() == "multipolygon":
+        multilen = len(feature["geometry"]["coordinates"])
+        for i in range(multilen-1):
+          annot = dict(
+            label=str(feature["properties"]["ann_name"]),
+            shape_type="polygon",
+            points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][i][0]],
+            
+            flags=feature.get("flags", {}),
+            group_id=feature.get("group_id", None),
+            other_data={
+              k:v for k, v in feature.items() if k not in annotation_keys
+            },
+          )
+          annotations.append(annot)
+
+        annot = dict(
+          label=str(feature["properties"]["ann_name"]),
+          shape_type="polygon",
+          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
+          
+          flags=feature.get("flags", {}),
+          group_id=feature.get("group_id", None),
+          other_data={
+            k:v for k, v in feature.items() if k not in annotation_keys
+          },
+        )
+      else:
+        annot = dict(
+          label=str(feature["properties"]["ann_name"]),
+          shape_type=feature["geometry"]["type"].lower(),
+          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+          
+          flags=feature.get("flags", {}),
+          group_id=feature.get("group_id", None),
+          other_data={
+            k:v for k, v in feature.items() if k not in annotation_keys
+          },
+        )
+      annotations.append(annot)
 
     otherData = {k:v for k, v in data.items() if k not in keys}
     

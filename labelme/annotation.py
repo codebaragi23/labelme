@@ -5,6 +5,7 @@ from qtpy import QtCore
 from qtpy import QtGui
 
 import labelme.utils
+from shapely.geometry import Point, Polygon
 
 
 # TODO(unknown):
@@ -113,6 +114,18 @@ class Annotation(object):
   def isClosed(self):
     return self._closed
 
+  def contain(self, annotation):
+    if self._shape_type == "polygon":
+      polygon = Polygon([[qtPt.x(), qtPt.y()] for qtPt in self.points])
+      nested = True
+      for qtPt in annotation.points:
+        pt = Point([qtPt.x(), qtPt.y()])
+        nested = pt.within(polygon)
+        if nested == False: break
+      return nested
+    else:
+      print("not support")
+
   def setOpen(self):
     self._closed = False
 
@@ -192,6 +205,7 @@ class Annotation(object):
       color = (
         self.select_fill_color if self.selected else self.fill_color
       )
+      color.setAlpha(255)
       painter.fillPath(line_path, color)
 
   def drawVertex(self, path, i):
