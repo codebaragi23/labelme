@@ -1371,9 +1371,20 @@ class MainWindow(QtWidgets.QMainWindow):
     self._noSelectionSlot = False
     self.canvas.loadAnnotations(annotations, replace=replace)
   
-  def loadLabels(self, annotations):
-    annot = [utils.dict_to_annotation(annotation, self._config["label_flags"]) for annotation in annotations]
-    self.loadAnnotations(annot)
+  def loadLabels(self, dict_annotations, avoidNested=True):
+    annotations = [utils.dict_to_annotation(annotation, self._config["label_flags"]) for annotation in dict_annotations]
+    if avoidNested:
+      length = len(annotations)
+      for sidx in range(length):
+        src = annotations[sidx]
+        for didx in range(0, annotations.index(src)):
+          dst = annotations[didx]
+          if src.contain(dst):
+            annotations.remove(src)
+            annotations.insert(annotations.index(dst), src)
+            break
+
+    self.loadAnnotations(annotations)
 
   def loadFlags(self, flags):
     self.flag_widget.clear()

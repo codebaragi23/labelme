@@ -8,177 +8,181 @@ from qtpy.QtWidgets import QStyle
 
 # https://stackoverflow.com/a/2039745/4158863
 class HTMLDelegate(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
-        super(HTMLDelegate, self).__init__()
-        self.doc = QtGui.QTextDocument(self)
+  def __init__(self, parent=None):
+    super(HTMLDelegate, self).__init__()
+    self.doc = QtGui.QTextDocument(self)
 
-    def paint(self, painter, option, index):
-        painter.save()
+  def paint(self, painter, option, index):
+    painter.save()
 
-        options = QtWidgets.QStyleOptionViewItem(option)
+    options = QtWidgets.QStyleOptionViewItem(option)
 
-        self.initStyleOption(options, index)
-        self.doc.setHtml(options.text)
-        options.text = ""
+    self.initStyleOption(options, index)
+    self.doc.setHtml(options.text)
+    options.text = ""
 
-        style = (
-            QtWidgets.QApplication.style()
-            if options.widget is None
-            else options.widget.style()
-        )
-        style.drawControl(QStyle.CE_ItemViewItem, options, painter)
+    style = (
+      QtWidgets.QApplication.style()
+      if options.widget is None
+      else options.widget.style()
+    )
+    style.drawControl(QStyle.CE_ItemViewItem, options, painter)
 
-        ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
+    ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
 
-        if option.state & QStyle.State_Selected:
-            ctx.palette.setColor(
-                QPalette.Text,
-                option.palette.color(
-                    QPalette.Active, QPalette.HighlightedText
-                ),
-            )
-        else:
-            ctx.palette.setColor(
-                QPalette.Text,
-                option.palette.color(QPalette.Active, QPalette.Text),
-            )
+    if option.state & QStyle.State_Selected:
+      ctx.palette.setColor(
+        QPalette.Text,
+        option.palette.color(
+          QPalette.Active, QPalette.HighlightedText
+        ),
+      )
+    else:
+      ctx.palette.setColor(
+        QPalette.Text,
+        option.palette.color(QPalette.Active, QPalette.Text),
+      )
 
-        textRect = style.subElementRect(QStyle.SE_ItemViewItemText, options)
+    textRect = style.subElementRect(QStyle.SE_ItemViewItemText, options)
 
-        if index.column() != 0:
-            textRect.adjust(5, 0, 0, 0)
+    if index.column() != 0:
+      textRect.adjust(5, 0, 0, 0)
 
-        thefuckyourshitup_constant = 4
-        margin = (option.rect.height() - options.fontMetrics.height()) // 2
-        margin = margin - thefuckyourshitup_constant
-        textRect.setTop(textRect.top() + margin)
+    thefuckyourshitup_constant = 4
+    margin = (option.rect.height() - options.fontMetrics.height()) // 2
+    margin = margin - thefuckyourshitup_constant
+    textRect.setTop(textRect.top() + margin)
 
-        painter.translate(textRect.topLeft())
-        painter.setClipRect(textRect.translated(-textRect.topLeft()))
-        self.doc.documentLayout().draw(painter, ctx)
+    painter.translate(textRect.topLeft())
+    painter.setClipRect(textRect.translated(-textRect.topLeft()))
+    self.doc.documentLayout().draw(painter, ctx)
 
-        painter.restore()
+    painter.restore()
 
-    def sizeHint(self, option, index):
-        thefuckyourshitup_constant = 4
-        return QtCore.QSize(
-            self.doc.idealWidth(),
-            self.doc.size().height() - thefuckyourshitup_constant,
-        )
+  def sizeHint(self, option, index):
+    thefuckyourshitup_constant = 4
+    return QtCore.QSize(
+      self.doc.idealWidth(),
+      self.doc.size().height() - thefuckyourshitup_constant,
+    )
 
 
 class AnnotationListWidgetItem(QtGui.QStandardItem):
-    def __init__(self, text=None, annotation=None):
-        super(AnnotationListWidgetItem, self).__init__()
-        self.setText(text)
-        self.setAnnotaion(annotation)
+  def __init__(self, text=None, annotation=None):
+    super(AnnotationListWidgetItem, self).__init__()
+    self.setText(text)
+    self.setAnnotaion(annotation)
 
-        self.setCheckable(True)
-        self.setCheckState(Qt.Checked)
-        self.setEditable(False)
-        self.setTextAlignment(Qt.AlignBottom)
+    self.setCheckable(True)
+    self.setCheckState(Qt.Checked)
+    self.setEditable(False)
+    self.setTextAlignment(Qt.AlignBottom)
+    
 
-    def clone(self):
-        return AnnotationListWidgetItem(self.text(), self.annotation())
+  def clone(self):
+    return AnnotationListWidgetItem(self.text(), self.annotation())
 
-    def setAnnotaion(self, annotation):
-        self.setData(annotation, Qt.UserRole)
+  def setAnnotaion(self, annotation):
+    self.setData(annotation, Qt.UserRole)
 
-    def annotation(self):
-        return self.data(Qt.UserRole)
+  def annotation(self):
+    return self.data(Qt.UserRole)
 
-    def __hash__(self):
-        return id(self)
+  def __hash__(self):
+    return id(self)
 
-    def __repr__(self):
-        return '{}("{}")'.format(self.__class__.__name__, self.text())
+  def __repr__(self):
+    return '{}("{}")'.format(self.__class__.__name__, self.text())
 
 
 class StandardItemModel(QtGui.QStandardItemModel):
-
-    itemDropped = QtCore.Signal()
-
-    def removeRows(self, *args, **kwargs):
-        ret = super().removeRows(*args, **kwargs)
-        self.itemDropped.emit()
-        return ret
-
+  itemDropped = QtCore.Signal()
+  def removeRows(self, *args, **kwargs):
+    ret = super().removeRows(*args, **kwargs)
+    self.itemDropped.emit()
+    return ret
 
 class AnnotationListWidget(QtWidgets.QListView):
 
-    itemDoubleClicked = QtCore.Signal(AnnotationListWidgetItem)
-    itemSelectionChanged = QtCore.Signal(list, list)
+  itemDoubleClicked = QtCore.Signal(AnnotationListWidgetItem)
+  itemSelectionChanged = QtCore.Signal(list, list)
 
-    def __init__(self):
-        super(AnnotationListWidget, self).__init__()
-        self._selectedItems = []
+  def __init__(self):
+    super(AnnotationListWidget, self).__init__()
+    self._selectedItems = []
 
-        self.setWindowFlags(Qt.Window)
-        self.setModel(StandardItemModel())
-        self.model().setItemPrototype(AnnotationListWidgetItem())
-        self.setItemDelegate(HTMLDelegate())
-        self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
-        self.setDefaultDropAction(Qt.MoveAction)
+    self.setWindowFlags(Qt.Window)
+    self.setModel(StandardItemModel())
+    self.model().setItemPrototype(AnnotationListWidgetItem())
+    self.setItemDelegate(HTMLDelegate())
+    self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+    self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+    self.setDefaultDropAction(Qt.MoveAction)
+    
+    self.setDragEnabled(True);
+    self.setAcceptDrops(True);
 
-        self.doubleClicked.connect(self.itemDoubleClickedEvent)
-        self.selectionModel().selectionChanged.connect(
-            self.itemSelectionChangedEvent
-        )
+    self.doubleClicked.connect(self.itemDoubleClickedEvent)
+    self.selectionModel().selectionChanged.connect(
+      self.itemSelectionChangedEvent
+    )
 
-    def __len__(self):
-        return self.model().rowCount()
+  def __len__(self):
+    return self.model().rowCount()
 
-    def __getitem__(self, i):
-        return self.model().item(i)
+  def __getitem__(self, i):
+    return self.model().item(i)
 
-    def __iter__(self):
-        for i in range(len(self)):
-            yield self[i]
+  def __iter__(self):
+    for i in range(len(self)):
+      yield self[i]
 
-    @property
-    def itemDropped(self):
-        return self.model().itemDropped
+  @property
+  def itemDropped(self):
+    return self.model().itemDropped
 
-    @property
-    def itemChanged(self):
-        return self.model().itemChanged
+  @property
+  def itemChanged(self):
+    return self.model().itemChanged
 
-    def itemSelectionChangedEvent(self, selected, deselected):
-        selected = [self.model().itemFromIndex(i) for i in selected.indexes()]
-        deselected = [
-            self.model().itemFromIndex(i) for i in deselected.indexes()
-        ]
-        self.itemSelectionChanged.emit(selected, deselected)
+  def dropEvent(self, event):
+    super(QtWidgets.QListView, self).dropEvent(event) 
 
-    def itemDoubleClickedEvent(self, index):
-        self.itemDoubleClicked.emit(self.model().itemFromIndex(index))
+  def itemSelectionChangedEvent(self, selected, deselected):
+    selected = [self.model().itemFromIndex(i) for i in selected.indexes()]
+    deselected = [
+      self.model().itemFromIndex(i) for i in deselected.indexes()
+    ]
+    self.itemSelectionChanged.emit(selected, deselected)
 
-    def selectedItems(self):
-        return [self.model().itemFromIndex(i) for i in self.selectedIndexes()]
+  def itemDoubleClickedEvent(self, index):
+    self.itemDoubleClicked.emit(self.model().itemFromIndex(index))
 
-    def scrollToItem(self, item):
-        self.scrollTo(self.model().indexFromItem(item))
+  def selectedItems(self):
+    return [self.model().itemFromIndex(i) for i in self.selectedIndexes()]
 
-    def addItem(self, item):
-        if not isinstance(item, AnnotationListWidgetItem):
-            raise TypeError("item must be AnnotationListWidgetItem")
-        self.model().setItem(self.model().rowCount(), 0, item)
-        item.setSizeHint(self.itemDelegate().sizeHint(None, None))
+  def scrollToItem(self, item):
+    self.scrollTo(self.model().indexFromItem(item))
 
-    def removeItem(self, item):
-        index = self.model().indexFromItem(item)
-        self.model().removeRows(index.row(), 1)
+  def addItem(self, item):
+    if not isinstance(item, AnnotationListWidgetItem):
+      raise TypeError("item must be AnnotationListWidgetItem")
+    self.model().setItem(self.model().rowCount(), 0, item)
+    item.setSizeHint(self.itemDelegate().sizeHint(None, None))
 
-    def selectItem(self, item):
-        index = self.model().indexFromItem(item)
-        self.selectionModel().select(index, QtCore.QItemSelectionModel.Select)
+  def removeItem(self, item):
+    index = self.model().indexFromItem(item)
+    self.model().removeRows(index.row(), 1)
 
-    def findItemByAnnotation(self, annotation):
-        for row in range(self.model().rowCount()):
-            item = self.model().item(row, 0)
-            if item.annotation() == annotation:
-                return item
+  def selectItem(self, item):
+    index = self.model().indexFromItem(item)
+    self.selectionModel().select(index, QtCore.QItemSelectionModel.Select)
 
-    def clear(self):
-        self.model().clear()
+  def findItemByAnnotation(self, annotation):
+    for row in range(self.model().rowCount()):
+      item = self.model().item(row, 0)
+      if item.annotation() == annotation:
+        return item
+
+  def clear(self):
+    self.model().clear()

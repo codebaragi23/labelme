@@ -622,11 +622,12 @@ class Canvas(QtWidgets.QWidget):
       
       
     for annotation in self.annotations:
-      if self.show_pixelmap:
-        annotation.paint_pixelmap(p)
-      elif (annotation.selected or not self._hideBackround) and self.isVisible(annotation):
-        annotation.fill = annotation.selected or annotation == self.hAnnotation
-        annotation.paint(p)
+      if (annotation.selected or not self._hideBackround) and self.isVisible(annotation):
+        if self.show_pixelmap:
+          annotation.paint_pixelmap(p)
+        else:
+          annotation.fill = annotation.selected or annotation == self.hAnnotation
+          annotation.paint(p)
     if self.current:
       self.current.paint(p)
       self.line.paint(p)

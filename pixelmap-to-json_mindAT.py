@@ -9,7 +9,7 @@ from PIL import Image
 from qtpy import QtGui
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--epsilon', type=float, default=2.5, help='epsilon pixel to approximate the polygons')
+parser.add_argument('--epsilon', type=float, default=0, help='epsilon pixel to approximate the polygons')
 
 # parser.add_argument('--input', type=str, default="examples/hyper/Air_20200331/GT", help='image mask input to compute all polygons')
 # parser.add_argument('--output', type=str, default="road.json", help='json output file')
@@ -66,24 +66,24 @@ def pixelmap_to_json(ifilename, ofilename, epsilon, config):
     
     labeled = images[:,:,id]
     labeled[labeled>0] = 255
-    contour, hierarchy = cv2.findContours(labeled, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(labeled, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    for i,c in enumerate(contour) :
-      contour[i] = cv2.approxPolyDP(c,epsilon,True)
-      if contour[i].shape[0] < 3:
+    for i,c in enumerate(contours) :
+      contours[i] = cv2.approxPolyDP(c,epsilon,True)
+      if contours[i].shape[0] < 3:
         continue
       d = {}
       d['label'] = label
-      d["points"] = contour[i].reshape(contour[i].shape[0],contour[i].shape[2]).tolist()
+      d["points"] = contours[i].reshape(contours[i].shape[0],contours[i].shape[2]).tolist()
       d["group_id"] = None
       d["shape_type"] = "polygon"
       d["flags"] = {}
       data["annotations"].append(d)
 
-    img = np.zeros_like(img)
-    cv2.drawContours()
+    # cv2.drawContours(img, contours, -1, (0,0,255), 1)
+    # cv2.imwrite("contours.jpg", img)
     # color = config['labels'][label]['color']
-    # cv2.drawContours(img, contour, -1, color, 1)
+    # cv2.drawContours(img, contours, -1, color, 1)
   # cv2.imshow("labeled",img)
   # cv2.waitKey(0)
   json.dump(data,out,indent=2)
