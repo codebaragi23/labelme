@@ -201,5 +201,5 @@ def main():
   return exitcode
 
 # this main block is required to generate executable by pyinstaller
-if __name__ == "__main__":\
+if __name__ == "__main__":
   main()

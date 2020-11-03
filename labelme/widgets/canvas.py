@@ -168,6 +168,7 @@ class Canvas(QtWidgets.QWidget):
 
   def setEditing(self, value=True):
     self.mode = self.EDIT if value else self.CREATE
+    self.cancelDrawing()
     if not value:  # Create
       self.unHighlight()
       self.deSelectAnnotation()
@@ -775,12 +776,15 @@ class Canvas(QtWidgets.QWidget):
         self.scrollRequest.emit(ev.delta(), QtCore.Qt.Horizontal)
     ev.accept()
 
+  def cancelDrawing(self):
+    self.current = None
+    self.drawingPolygon.emit(False)
+    self.update()
+
   def keyPressEvent(self, ev):
     key = ev.key()
     if key == QtCore.Qt.Key_Escape and self.current:
-      self.current = None
-      self.drawingPolygon.emit(False)
-      self.update()
+      self.cancelDrawing()
     elif key == QtCore.Qt.Key_Return and self.canCloseAnnotation():
       self.finalise()
 

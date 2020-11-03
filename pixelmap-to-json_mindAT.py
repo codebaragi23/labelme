@@ -19,9 +19,13 @@ parser.add_argument('--epsilon', type=float, default=0, help='epsilon pixel to a
 # parser.add_argument('--output', type=str, default="xx.json", help='json output file')
 # parser.add_argument('--config', type=str, default="test2/config.json", help='config file content labels informations')
 
-parser.add_argument('--input', type=str, default="test/산림_항공_37802098_033_FGT.tif", help='image mask input to compute all polygons')
-parser.add_argument('--output', type=str, default="test/산림_항공_37802098.json", help='json output file')
-parser.add_argument('--config', type=str, default="test/config.json", help='config file content labels informations')
+# parser.add_argument('--input', type=str, default="test/산림_항공_37802098_033_FGT.tif", help='image mask input to compute all polygons')
+# parser.add_argument('--output', type=str, default="test/산림_항공_37802098.json", help='json output file')
+# parser.add_argument('--config', type=str, default="test/config.json", help='config file content labels informations')
+
+parser.add_argument('--input', type=str, default="sample/", help='image mask input to compute all polygons')
+parser.add_argument('--output', type=str, default="sample/", help='json output file')
+parser.add_argument('--config', type=str, default="sample/config.json", help='config file content labels informations')
 opt = parser.parse_args()
 
 def to_categorical(y, num_classes=None):
@@ -48,7 +52,6 @@ def pixelmap_to_json(ifilename, ofilename, epsilon, config):
   images = to_categorical(gray).reshape((gray.shape[0],gray.shape[1],-1))
 
   filename = os.path.basename(ifilename)
-  out = open(ofilename,'w')
   data = {}
   data["version"] = "5.0.0"
   data["flags"] = {}
@@ -86,7 +89,8 @@ def pixelmap_to_json(ifilename, ofilename, epsilon, config):
     # cv2.drawContours(img, contours, -1, color, 1)
   # cv2.imshow("labeled",img)
   # cv2.waitKey(0)
-  json.dump(data,out,indent=2)
+  with open(ofilename, 'w', encoding='UTF-8') as out:
+    json.dump(data,out,indent=2,ensure_ascii=False)
 
 def scan_all_images(folderPath):
   extensions = ["tif"]

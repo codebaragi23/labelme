@@ -4,7 +4,7 @@ import gdal, json
 
 parser = argparse.ArgumentParser()
 #parser.add_argument('--input', type=str, default="test/FR_AP_36705045_001_FGT.tif", help='input<geofile(geotiff and geojson) or directory> to convert all coordinates')
-parser.add_argument('--input', type=str, default="test", help='input<geofile(geotiff and geojson) or directory> to convert all coordinates')
+parser.add_argument('--input', type=str, default="sample", help='input<geofile(geotiff and geojson) or directory> to convert all coordinates')
 opt = parser.parse_args()
 
 def global_to_pixel_coordi(geoimg_fn, geojson_fn, output_fn):
@@ -29,19 +29,17 @@ def global_to_pixel_coordi(geoimg_fn, geojson_fn, output_fn):
 def scan_all_images(folderPath):
   extensions = ["tif"]
 
-
   files = os.listdir(folderPath)
   images = [osp.join(folderPath, file) for file in files if file.lower().endswith(tuple(extensions))]
   images.sort(key=lambda x: x.lower())
   return images
 
 if __name__ == '__main__':
-
   if osp.isdir(opt.input):
     images = scan_all_images(opt.input)
     for input in images:
       geoimg_fn = input
-      geojson_fn = osp.splitext(input)[0] + ".json"
+      geojson_fn = osp.splitext(input)[0] + "_FGT.json"
       output_fn = osp.splitext(input)[0] + "_LC.json"
       global_to_pixel_coordi(geoimg_fn, geojson_fn, output_fn)
 
@@ -49,9 +47,9 @@ if __name__ == '__main__':
     input = opt.input
     if osp.splitext(input)[1] == ".tif":
       geoimg_fn = input
-      geojson_fn = osp.splitext(input)[0] + ".json"
+      geojson_fn = osp.splitext(input)[0] + "_FGT.json"
       output_fn = osp.splitext(input)[0] + "_LC.json"
-    elif osp.splitext(input)[1] == ".json":
+    elif osp.splitext(input)[1] == ".geojson":
       geojson_fn = input
       geoimg_fn = osp.splitext(input)[0] + ".tif"
       output_fn = osp.splitext(input)[0] + "_LC.json"
