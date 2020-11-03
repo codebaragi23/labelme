@@ -56,6 +56,12 @@ class LabelFile(object):
     try:
       if ext in [".tif", ".tiff"]:
         image = tifffile.imread(filename)
+
+        #농업
+        if image.shape[0] == 3:
+          image = image.transpose(1,2,0)
+
+        #image = (image/32).clip(0, 255)
         image = image.astype("uint8")
         #image = image[:,:,:3]
         image_pil = PIL.Image.fromarray(image)
@@ -159,7 +165,8 @@ class LabelFile(object):
         annot = dict(
           label=str(feature["properties"]["ann_name"]),
           shape_type=feature["geometry"]["type"].lower(),
-          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+          #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+          points=[[x, y] for x, y in feature["geometry"]["coordinates"][0]],
           
           flags=feature.get("flags", {}),
           group_id=feature.get("group_id", None),
@@ -168,6 +175,55 @@ class LabelFile(object):
           },
         )
       annotations.append(annot)
+
+    # annotations = []
+    # for feature in data["features"]:
+    #   if feature["geometry"]["type"].lower() == "multipolygon":
+    #     multilen = len(feature["geometry"]["coordinates"])
+    #     for i in range(multilen-1):
+    #       annot = dict(
+    #         #label=str(feature["properties"]["ann_name"]),
+    #         label=str(feature["properties"]["작물종류"]),
+    #         shape_type="polygon",
+    #         #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][i][0]],
+    #         points=[[x*3.85, -y*4.67] for x, y in feature["geometry"]["coordinates"][i][0]],
+            
+    #         flags=feature.get("flags", {}),
+    #         group_id=feature.get("group_id", None),
+    #         other_data={
+    #           k:v for k, v in feature.items() if k not in annotation_keys
+    #         },
+    #       )
+    #       annotations.append(annot)
+
+    #     annot = dict(
+    #       #label=str(feature["properties"]["ann_name"]),
+    #       label=str(feature["properties"]["작물종류"]),
+    #       shape_type="polygon",
+    #       #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
+    #       points=[[x*3.85, -y*4.67] for x, y in feature["geometry"]["coordinates"][multilen-1][0]],
+          
+    #       flags=feature.get("flags", {}),
+    #       group_id=feature.get("group_id", None),
+    #       other_data={
+    #         k:v for k, v in feature.items() if k not in annotation_keys
+    #       },
+    #     )
+    #   else:
+    #     annot = dict(
+    #       #label=str(feature["properties"]["ann_name"]),
+    #       label=str(feature["properties"]["작물종류"]),
+    #       shape_type=feature["geometry"]["type"].lower(),
+    #       #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+    #       points=[[x, -y] for x, y in feature["geometry"]["coordinates"][0]],
+          
+    #       flags=feature.get("flags", {}),
+    #       group_id=feature.get("group_id", None),
+    #       other_data={
+    #         k:v for k, v in feature.items() if k not in annotation_keys
+    #       },
+    #     )
+    #   annotations.append(annot)
 
     otherData = {k:v for k, v in data.items() if k not in keys}
     

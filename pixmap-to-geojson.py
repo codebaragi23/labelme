@@ -9,17 +9,18 @@ from geojson import Polygon, Feature, FeatureCollection, dump
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epsilon', type=float, default=2.5, help='epsilon pixel to approximate the polygons')
-parser.add_argument('--input', type=str, default="GT/", help='image mask input or directory to compute all polygons')
-parser.add_argument('--output', type=str, default="result.json", help='json output file(if input is a image file)')
-parser.add_argument('--config', type=str, default="GT/config.json", help='config file content labels informations')
+
+#parser.add_argument('--input', type=str, default="sample/FR_AP_36705045_001_FGT.tif", help='image mask input or directory to compute all polygons')
+#parser.add_argument('--output', type=str, default="sample/FR_AP_36705045_001_FGT.geojson", help='json output file(if input is a image file)')
+#parser.add_argument('--config', type=str, default="sample/config.json", help='config file content labels informations')
+parser.add_argument('--input', type=str, default="sample/", help='image mask input or directory to compute all polygons')
+parser.add_argument('--output', type=str, default="sample/", help='json output file(if input is a image file)')
+parser.add_argument('--config', type=str, default="sample/config.json", help='config file content labels informations')
 opt = parser.parse_args()
 
 def pixelmap_to_json(ifilename, ofilename, epsilon, config):
   img = cv2.imread(ifilename)
   gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-  shape = (gray.shape[0],gray.shape[1],1)
-  gray = gray.reshape(shape)
 
   def to_categorical(y, num_classes=None):
     y = np.array(y, dtype='uint8').ravel()
@@ -34,12 +35,12 @@ def pixelmap_to_json(ifilename, ofilename, epsilon, config):
   filename = os.path.basename(ifilename)
   features = []
 
-  property = {}
-  property['img_width'] = img.shape[1]
-  property['img_height'] = img.shape[0]
-    
   for label in config['labels'] : 
     id = config['labels'][label]['id']
+    
+    property = {}
+    property['img_width'] = img.shape[1]
+    property['img_height'] = img.shape[0]
     property['ann_code'] = id
     property['ann_name'] = label
     if type(id) == list:
