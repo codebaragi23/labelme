@@ -9,8 +9,8 @@ from .. import utils
 class AppearanceWidget(QtWidgets.QWidget):
   EVAL_PIXEL_ACCURACY = 0
   EVAL_MEAN_ACCURACY = 1
-  EVAL_MEAN_IU = 2
-  EVAL_FREQUENCY_WEIGHTED_IU = 3
+  EVAL_MEAN_IOU = 2
+  EVAL_FREQUENCY_WEIGHTED_IOU = 3
 
   def __init__(self, callback):
     super(AppearanceWidget, self).__init__()
