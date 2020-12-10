@@ -190,7 +190,7 @@ class Annotation(object):
 
       # Try using integer sizes for smoother drawing(?)
       pen.setWidth(max(1, int(round(2.0 / self.scale))))
-      painter.setPen(pen)
+      painter.setPen(pen) 
       painter.drawPath(line_path)
       painter.drawPath(vrtx_path)
       painter.fillPath(vrtx_path, self._vertex_fill_color)
@@ -205,7 +205,6 @@ class Annotation(object):
       color = (
         self.select_fill_color if self.selected else self.fill_color
       )
-      color.setAlpha(255)
       painter.fillPath(line_path, color)
 
   def drawVertex(self, path, i):
