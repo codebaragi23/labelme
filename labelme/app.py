@@ -1665,7 +1665,7 @@ class MainWindow(QtWidgets.QMainWindow):
     
     geolabel = False
     if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
-      self.labelFile, self.imagePath = self.load_labelfile(filename)
+      self.labelFile, self.imagePath = self.load_labelfile(label_file)
     elif QtCore.QFile.exists(osp.splitext(filename)[0] + ".geojson"):
       geo = geopandas.read_file(osp.splitext(filename)[0] + ".geojson", encoding='cp949')
       geo = geo._to_geo(na="null", show_bbox=False)
