@@ -1217,6 +1217,9 @@ class MainWindow(QtWidgets.QMainWindow):
       menu.addAction(action)
 
   def popLabelListMenu(self, point):
+    if not self.canvas.editing():
+      return;
+      
     self.menus.labelList.exec_(self.annotList.mapToGlobal(point))
 
   def validateLabel(self, label):
@@ -1447,14 +1450,14 @@ class MainWindow(QtWidgets.QMainWindow):
   def annotSelectionChanged(self):
     if self._noSelectionSlot:
       return
-    if self.canvas.editing():
-      selected_annotations = []
-      for item in self.annotList.selectedItems():
-        selected_annotations.append(item.annotation())
-      if selected_annotations:
-        self.canvas.selectAnnotations(selected_annotations)
-      else:
-        self.canvas.deSelectAnnotation()
+
+    selected_annotations = []
+    for item in self.annotList.selectedItems():
+      selected_annotations.append(item.annotation())
+    if selected_annotations:
+      self.canvas.selectAnnotations(selected_annotations)
+    else:
+      self.canvas.deSelectAnnotation()
 
   def annotItemChanged(self, item):
     annotation = item.annotation()
@@ -2668,9 +2671,6 @@ class MainWindow(QtWidgets.QMainWindow):
     self.setDirty()
 
   def openDirDialog(self, _value=False, dirpath=None):
-    if not self.mayContinue():
-      return
-
     defaultOpenDirPath = dirpath if dirpath else "."
     if self.lastOpenDir and osp.exists(self.lastOpenDir):
       defaultOpenDirPath = self.lastOpenDir
@@ -2737,6 +2737,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if not self.mayContinue() or not dirpath:
       return
 
+    self.setClean()
     self.actions.openNextImg.setEnabled(True)
     self.actions.openPrevImg.setEnabled(True)
 
@@ -2758,4 +2759,5 @@ class MainWindow(QtWidgets.QMainWindow):
       else:
         item.setCheckState(Qt.Unchecked)
       self.fileListWidget.addItem(item)
+
     self.openNextImg(load=load)
