@@ -40,8 +40,9 @@ class Canvas(QtWidgets.QWidget):
 
   # polygon, rectangle, line, or point
   _createMode = "polygon"
-
   _fill_drawing = False
+
+  activeAction = None
 
   def __init__(self, *args, **kwargs):
     self.epsilon = kwargs.pop("epsilon", 10.0)
@@ -147,14 +148,14 @@ class Canvas(QtWidgets.QWidget):
       annotation.selected = False
     self.repaint()
 
-  def enterEvent(self, ev):
+  def enterEvent(self, event):
     self.overrideCursor(self._cursor)
 
-  def leaveEvent(self, ev):
+  def leaveEvent(self, event):
     self.unHighlight()
     self.restoreCursor()
 
-  def focusOutEvent(self, ev):
+  def focusOutEvent(self, event):
     self.restoreCursor()
 
   def isVisible(self, annotation):
@@ -185,13 +186,13 @@ class Canvas(QtWidgets.QWidget):
   def selectedVertex(self):
     return self.hVertex is not None
 
-  def mouseMoveEvent(self, ev):
+  def mouseMoveEvent(self, event):
     """Update line with last point and current coordinates."""
     try:
       if QT5:
-        pos = self.transformPos(ev.localPos())
+        pos = self.transformPos(event.localPos())
       else:
-        pos = self.transformPos(ev.posF())
+        pos = self.transformPos(event.posF())
     except AttributeError:
       return
 
@@ -240,7 +241,7 @@ class Canvas(QtWidgets.QWidget):
       return
 
     # Polygon copy moving.
-    if QtCore.Qt.RightButton & ev.buttons():
+    if QtCore.Qt.RightButton & event.buttons():
       if self.selectedAnnotationsCopy and self.prevPoint:
         self.overrideCursor(CURSOR_MOVE)
         self.boundedMoveAnnotations(self.selectedAnnotationsCopy, pos)
@@ -253,7 +254,7 @@ class Canvas(QtWidgets.QWidget):
       return
 
     # Polygon/Vertex moving.
-    if QtCore.Qt.LeftButton & ev.buttons():
+    if QtCore.Qt.LeftButton & event.buttons():
       if self.selectedVertex():
         self.boundedMoveVertex(pos)
         self.repaint()
@@ -332,12 +333,12 @@ class Canvas(QtWidgets.QWidget):
     self.hEdge = None
     self.movingAnnotation = True  # Save changes
 
-  def mousePressEvent(self, ev):
+  def mousePressEvent(self, event):
     if QT5:
-      pos = self.transformPos(ev.localPos())
+      pos = self.transformPos(event.localPos())
     else:
-      pos = self.transformPos(ev.posF())
-    if ev.button() == QtCore.Qt.LeftButton:
+      pos = self.transformPos(event.posF())
+    if event.button() == QtCore.Qt.LeftButton:
       if self.drawing():
         if self.current:
           # Add point to existing annotation.
@@ -353,7 +354,7 @@ class Canvas(QtWidgets.QWidget):
           elif self.createMode == "linestrip":
             self.current.addPoint(self.line[1])
             self.line[0] = self.current[-1]
-            if int(ev.modifiers()) == QtCore.Qt.ControlModifier:
+            if int(event.modifiers()) == QtCore.Qt.ControlModifier:
               self.finalise()
         elif not self.outOfPixmap(pos):
           # Create new annotation.
@@ -369,39 +370,39 @@ class Canvas(QtWidgets.QWidget):
             self.drawingPolygon.emit(True)
             self.update()
       else:
-        group_mode = int(ev.modifiers()) == QtCore.Qt.ControlModifier
+        group_mode = int(event.modifiers()) == QtCore.Qt.ControlModifier
         self.selectAnnotationPoint(pos, multiple_selection_mode=group_mode)
         self.prevPoint = pos
         self.repaint()
-    elif ev.button() == QtCore.Qt.RightButton and self.editing():
-      group_mode = int(ev.modifiers()) == QtCore.Qt.ControlModifier
+    elif event.button() == QtCore.Qt.RightButton and self.editing():
+      group_mode = int(event.modifiers()) == QtCore.Qt.ControlModifier
       self.selectAnnotationPoint(pos, multiple_selection_mode=group_mode)
       self.prevPoint = pos
       self.repaint()
 
-  def mouseReleaseEvent(self, ev):
-    if ev.button() == QtCore.Qt.RightButton:
+  def mouseReleaseEvent(self, event):
+    if event.button() == QtCore.Qt.RightButton:
       menu = self.menus[len(self.selectedAnnotationsCopy) > 0]
       self.restoreCursor()
       if (
-        not menu.exec_(self.mapToGlobal(ev.pos()))
+        not menu.exec_(self.mapToGlobal(event.pos()))
         and self.selectedAnnotationsCopy
       ):
         # Cancel the move by deleting the shadow copy.
         self.selectedAnnotationsCopy = []
         self.repaint()
-    elif ev.button() == QtCore.Qt.LeftButton and self.selectedAnnotations:
+    elif event.button() == QtCore.Qt.LeftButton and self.selectedAnnotations:
       self.overrideCursor(CURSOR_GRAB)
       if (
         self.editing()
-        and int(ev.modifiers()) == QtCore.Qt.ShiftModifier
+        and int(event.modifiers()) == QtCore.Qt.ShiftModifier
       ):
         # Add point to line if: left-click + SHIFT on a line segment
         self.addPointToEdge()
-    elif ev.button() == QtCore.Qt.LeftButton and self.selectedVertex():
+    elif event.button() == QtCore.Qt.LeftButton and self.selectedVertex():
       if (
         self.editing()
-        and int(ev.modifiers()) == QtCore.Qt.ShiftModifier
+        and int(event.modifiers()) == QtCore.Qt.ShiftModifier
       ):
         # Delete point if: left-click + SHIFT on a point
         self.removeSelectedPoint()
@@ -447,7 +448,7 @@ class Canvas(QtWidgets.QWidget):
   def canCloseAnnotation(self):
     return self.drawing() and self.current and len(self.current) > 2
 
-  def mouseDoubleClickEvent(self, ev):
+  def mouseDoubleClickEvent(self, event):
     # We need at least 4 points here, since the mousePress handler
     # adds an extra one before this handler is called.
     if (
@@ -580,7 +581,19 @@ class Canvas(QtWidgets.QWidget):
       for annotation in self.annotations:
         if annotation.label in ["__ignore__", "background"]: continue
         points = []
-        for pt in annotation.points: points.append([pt.x(), pt.y()])
+        if annotation.shape_type == "polygon":
+          for pt in annotation.points: points.append([pt.x(), pt.y()])
+        elif annotation.shape_type == "rectangle":
+          pt1 = annotation.points[0]
+          pt2 = annotation.points[1]
+          points.append([pt1.x(), pt1.y()])
+          points.append([pt2.x(), pt1.y()])
+          points.append([pt2.x(), pt2.y()])
+          points.append([pt1.x(), pt2.y()])
+        else:
+          raise TypeError(
+            "Not support annotation shae_type {}".format(annotation.shape_type)
+          )
         
         points = np.array(points, np.int32)
         cv2.fillPoly(eval, [points], annotation.fill_color.getRgb()[:3][::-1])
@@ -608,12 +621,12 @@ class Canvas(QtWidgets.QWidget):
       elif self.eval_method == AppearanceWidget.EVAL_MEAN_ACCURACY:
         eval_val = labelme.eval.mean_accuracy(eval, gt)
         eval_text = " Mean accuracy: %d%%" % round(eval_val*100)
-      elif self.eval_method == AppearanceWidget.EVAL_MEAN_IU:
-        eval_val = labelme.eval.mean_IU(eval, gt)
-        eval_text = " Mean IU: %d%%" % round(eval_val*100)
-      elif self.eval_method == AppearanceWidget.EVAL_FREQUENCY_WEIGHTED_IU:
-        eval_val = labelme.eval.frequency_weighted_IU(eval, gt)
-        eval_text = " Frequency Weighted IU: %d%%" % round(eval_val*100)
+      elif self.eval_method == AppearanceWidget.EVAL_MEAN_IOU:
+        eval_val = labelme.eval.mean_IoU(eval, gt)
+        eval_text = " Mean IoU: %d%%" % round(eval_val*100)
+      elif self.eval_method == AppearanceWidget.EVAL_FREQUENCY_WEIGHTED_IOU:
+        eval_val = labelme.eval.frequency_weighted_IoU(eval, gt)
+        eval_text = " Frequency Weighted IoU: %d%%" % round(eval_val*100)
 
       fm = QtGui.QFontMetrics(p.font())
       width = fm.width(eval_text)
@@ -747,46 +760,54 @@ class Canvas(QtWidgets.QWidget):
       return self.scale * self.pixmap.size()
     return super(Canvas, self).minimumSizeHint()
 
-  def wheelEvent(self, ev):
+  def wheelEvent(self, event):
     if QT5:
-      mods = ev.modifiers()
-      delta = ev.angleDelta()
+      mods = event.modifiers()
+      delta = event.angleDelta()
       if QtCore.Qt.ControlModifier == int(mods):
         # with Ctrl/Command key
         # zoom
-        self.zoomRequest.emit(delta.y(), ev.pos())
+        self.zoomRequest.emit(delta.y(), event.pos())
       else:
         # scroll
         self.scrollRequest.emit(delta.x(), QtCore.Qt.Horizontal)
         self.scrollRequest.emit(delta.y(), QtCore.Qt.Vertical)
     else:
-      if ev.orientation() == QtCore.Qt.Vertical:
-        mods = ev.modifiers()
+      if event.orientation() == QtCore.Qt.Vertical:
+        mods = event.modifiers()
         if QtCore.Qt.ControlModifier == int(mods):
           # with Ctrl/Command key
-          self.zoomRequest.emit(ev.delta(), ev.pos())
+          self.zoomRequest.emit(event.delta(), event.pos())
         else:
           self.scrollRequest.emit(
-            ev.delta(),
+            event.delta(),
             QtCore.Qt.Horizontal
             if (QtCore.Qt.ShiftModifier == int(mods))
             else QtCore.Qt.Vertical,
           )
       else:
-        self.scrollRequest.emit(ev.delta(), QtCore.Qt.Horizontal)
-    ev.accept()
+        self.scrollRequest.emit(event.delta(), QtCore.Qt.Horizontal)
+    event.accept()
 
   def cancelDrawing(self):
     self.current = None
     self.drawingPolygon.emit(False)
     self.update()
 
-  def keyPressEvent(self, ev):
-    key = ev.key()
+  def cancelCreate(self):
+    if self.activeAction and self.activeAction.isChecked():
+      self.activeAction.setChecked(False);
+      self.setEditing(True)
+      self.restoreCursor()
+
+  def keyPressEvent(self, event):
+    key = event.key()
     if key == QtCore.Qt.Key_Escape and self.current:
       self.cancelDrawing()
     elif key == QtCore.Qt.Key_Return and self.canCloseAnnotation():
       self.finalise()
+    else:
+      self.cancelCreate();
 
   def setLastLabel(self, text, flags):
     assert text

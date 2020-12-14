@@ -59,7 +59,7 @@ from labelme.widgets import QJsonTreeWidget
 # - [low,maybe] Preview images on file dialogs.
 # - Zoom is too "steppy".
 
-LABEL_COLORMAP = imgviz.label_colormap(value=200)
+LABEL_COLORMAP = imgviz.label_colormap(value=None)
 class MainWindow(QtWidgets.QMainWindow):
 
   FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
@@ -1057,6 +1057,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # self.firstStart = True
     # if self.firstStart:
     #  QWhatsThis.enterWhatsThisMode()
+
   def menu(self, title, actions=None):
     menu = self.menuBar().addMenu(title)
     if actions:
@@ -1070,7 +1071,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def populateModeActions(self):
     menu = self.actions.menu
-    self.canvas.menus[0].clear()
+    self.canvas.menus[0].clear()      
     utils.addActions(self.canvas.menus[0], menu)
     self.menus.edit.clear()
     utils.addActions(self.menus.edit, self.actions.annotOperations + self.actions.editMenu)
@@ -1185,6 +1186,7 @@ class MainWindow(QtWidgets.QMainWindow):
       if action.isChecked():
         edit=False
 
+    self.canvas.activeAction = toggleAction
     self.canvas.setEditing(edit)
     self.canvas.createMode = createMode
     if createMode == "polygon":
@@ -1215,6 +1217,9 @@ class MainWindow(QtWidgets.QMainWindow):
       menu.addAction(action)
 
   def popLabelListMenu(self, point):
+    if not self.canvas.editing():
+      return;
+      
     self.menus.labelList.exec_(self.annotList.mapToGlobal(point))
 
   def validateLabel(self, label):
@@ -1334,7 +1339,6 @@ class MainWindow(QtWidgets.QMainWindow):
       action.setEnabled(True)
 
     rgb = self._get_rgb_by_label(annotation.label)
-
     r, g, b = rgb
     annot_item.setText(
       '{} <font color="#{:02x}{:02x}{:02x}">●</font>'.format(
@@ -1446,14 +1450,14 @@ class MainWindow(QtWidgets.QMainWindow):
   def annotSelectionChanged(self):
     if self._noSelectionSlot:
       return
-    if self.canvas.editing():
-      selected_annotations = []
-      for item in self.annotList.selectedItems():
-        selected_annotations.append(item.annotation())
-      if selected_annotations:
-        self.canvas.selectAnnotations(selected_annotations)
-      else:
-        self.canvas.deSelectAnnotation()
+
+    selected_annotations = []
+    for item in self.annotList.selectedItems():
+      selected_annotations.append(item.annotation())
+    if selected_annotations:
+      self.canvas.selectAnnotations(selected_annotations)
+    else:
+      self.canvas.deSelectAnnotation()
 
   def annotItemChanged(self, item):
     annotation = item.annotation()
@@ -1792,11 +1796,9 @@ class MainWindow(QtWidgets.QMainWindow):
       if osp.exists(worker_file):
         self.workerFile = worker_file
         self.annotatorInfosWidget.loadJson(worker_file)
-        self.annotator_dock.raise_()
       else:
         self.workerFile = None
         self.annotatorInfosWidget.clear()
-        self.file_dock.raise_()
         
     return True
 
@@ -2101,7 +2103,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     answer = mb.warning(self, self.tr("Attention"), msg, mb.Yes | mb.No)
     if not answer == mb.Yes:      return
-
+    if languages.index(language) == 0:      return
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + languages.index(language))
 
   @Slot()
@@ -2555,6 +2557,12 @@ class MainWindow(QtWidgets.QMainWindow):
     labelFile = LabelFile(label_file)
     self.canvas.groundtruth = [utils.dict_to_annotation(annotation, self._config["label_flags"]) for annotation in labelFile.annotations]
     for gt in self.canvas.groundtruth:
+      if not self.labelList.findItemsByLabel(gt.label):
+        label_item = self.labelList.createItemFromLabel(gt.label)
+        self.labelList.addItem(label_item)
+        rgb = self._get_rgb_by_label(gt.label)
+        self.labelList.setItemLabel(label_item, gt.label, rgb)
+
       rgb = self._get_rgb_by_label(gt.label)
       gt.setColor(rgb)
 
@@ -2663,9 +2671,6 @@ class MainWindow(QtWidgets.QMainWindow):
     self.setDirty()
 
   def openDirDialog(self, _value=False, dirpath=None):
-    if not self.mayContinue():
-      return
-
     defaultOpenDirPath = dirpath if dirpath else "."
     if self.lastOpenDir and osp.exists(self.lastOpenDir):
       defaultOpenDirPath = self.lastOpenDir
@@ -2732,6 +2737,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if not self.mayContinue() or not dirpath:
       return
 
+    self.setClean()
     self.actions.openNextImg.setEnabled(True)
     self.actions.openPrevImg.setEnabled(True)
 
@@ -2753,4 +2759,5 @@ class MainWindow(QtWidgets.QMainWindow):
       else:
         item.setCheckState(Qt.Unchecked)
       self.fileListWidget.addItem(item)
+
     self.openNextImg(load=load)
