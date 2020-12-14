@@ -22,10 +22,10 @@ PY2 = sys.version[0] == "2"
 PY3 = sys.version[0] == "3"
 del sys
 
-from labelme.label_file import LabelFile
-from labelme import testing
-from labelme import utils
-from labelme import eval
+from mindAT.label_file import LabelFile
+from mindAT import testing
+from mindAT import utils
+from mindAT import eval
 import numpy as np
 
 a = np.zeros((5,5), dtype='uint8')

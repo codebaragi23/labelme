@@ -4,7 +4,7 @@
 ## Usage
 
 ```bash
-labelme data_annotated --flags flags.txt --nodata
+mindAT data_annotated --flags flags.txt --nodata
 ```
 
 <img src=".readme/annotation_cat.jpg" width="100%" />

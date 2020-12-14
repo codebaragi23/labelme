@@ -148,8 +148,8 @@
     </message>
     <message>
         <location filename="../app.py" line="231"/>
-        <source>&amp;Next Image</source>
-        <translation>다음 이미지(&amp;N)</translation>
+        <source>Next Image</source>
+        <translation>다음 이미지</translation>
     </message>
     <message>
         <location filename="../app.py" line="231"/>
@@ -158,8 +158,8 @@
     </message>
     <message>
         <location filename="../app.py" line="239"/>
-        <source>&amp;Prev Image</source>
-        <translation>이전 이미지(&amp;P)</translation>
+        <source>Prev Image</source>
+        <translation>이전 이미지</translation>
     </message>
     <message>
         <location filename="../app.py" line="239"/>
@@ -215,6 +215,16 @@
         <location filename="../app.py" line="278"/>
         <source>Change display language</source>
         <translation>언어 변경</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="354"/>
+        <source>Reload &amp;Configuration</source>
+        <translation>재구성</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="354"/>
+        <source>Reload configuration from configuraton file</source>
+        <translation>환경 설정 파일로부터 재구성</translation>
     </message>
     <message>
         <location filename="../app.py" line="281"/>
@@ -637,7 +647,7 @@
         <translation>최근 열기(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../app.py" line="653"/>
+        <location filename="../app.py" line="210"/>
         <source>&amp;Preferences</source>
         <translation>환경 설정(&amp;P)</translation>
     </message>

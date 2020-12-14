@@ -6,15 +6,18 @@ import os.path as osp
 import sys
 import yaml
 
+from fiona import _shim, schema
+
 from qtpy import QtCore
 from qtpy import QtWidgets
 
-from labelme import __appname__
-from labelme import __version__
-from labelme.app import MainWindow
-from labelme.config import get_config
-from labelme.logger import logger
-from labelme.utils import newIcon
+from mindAT import __appname__
+from mindAT import __version__
+from mindAT.app import MainWindow
+from mindAT.config import get_config
+from mindAT.config import get_default_config
+from mindAT.logger import logger
+from mindAT.utils import newIcon
 
 from time import sleep
 
@@ -40,7 +43,7 @@ def main():
     help="output file or directory (if it ends with .json it is "
     "recognized as file, else as directory)",
   )
-  default_config_file = os.path.join(os.path.expanduser("~"), ".labelmerc")
+  default_config_file = os.path.join(os.path.expanduser("~"), ".mindATrc")
   parser.add_argument(
     "--config",
     dest="config",
@@ -149,7 +152,7 @@ def main():
     logger.error(
       "--labels must be specified with --validatelabel or "
       "validate_label: true in the config file "
-      "(ex. ~/.labelmerc)."
+      "(ex. ~/.mindATrc)."
     )
     sys.exit(1)
 
@@ -166,18 +169,17 @@ def main():
   app.setWindowIcon(newIcon("icon"))
 
   support_languages = {'en_US':'English', 'ko_KR':'Korean'}
-  exitcode = QtCore.QLocale.system().name()
+  language_code = QtCore.QLocale.system().name()
+  val = support_languages.pop(language_code)
+  old = support_languages;
+  support_languages = {language_code:val}
+  support_languages.update(old)
 
-  #exitcode = "en_US"
-  while exitcode in support_languages.keys():
-    val = support_languages.pop(exitcode)
-    old = support_languages;
-    support_languages = {exitcode:val}
-    support_languages.update(old)
-
+  returncode = 0
+  while language_code in support_languages.keys():
     translator = QtCore.QTranslator()
     translator.load(
-      exitcode,
+      language_code,
       osp.dirname(osp.abspath(__file__)) + "/translate",
     )
     app.installTranslator(translator)
@@ -197,14 +199,25 @@ def main():
 
     win.show()
     win.raise_()
-    exitcode = app.exec_()
-    if exitcode - MainWindow.RESTART_CODE in range(len(support_languages)):
-      exitcode = list(support_languages.keys())[exitcode - MainWindow.RESTART_CODE]
+    returncode = app.exec_()
+    if returncode - MainWindow.RESTART_CODE in range(len(support_languages)):
+      language_code = list(support_languages.keys())[returncode - MainWindow.RESTART_CODE]
+      val = support_languages.pop(language_code)
+      old = support_languages;
+      support_languages = {language_code:val}
+      support_languages.update(old)
       win.close()
+
+    elif returncode - MainWindow.RESTART_CODE == MainWindow.RESET_CONFIG:
+      config = get_default_config()
+      win.close()
+
+    else:
+      language_code = 0;
     app.removeTranslator(translator)
     
-  sys.exit(exitcode)
-  return exitcode
+  sys.exit(returncode)
+  return returncode
 
 # this main block is required to generate executable by pyinstaller
 if __name__ == "__main__":

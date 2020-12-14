@@ -20,6 +20,14 @@ annotation_color: auto  # null, 'auto', 'manual'
 shift_auto_annotation_color: 0
 label_colors: null
 
+tiff_real_bitdepth: 12
+
+# geo-json configuration
+geo:
+  prop_ann_name: "cropsid"
+  porp_ann_id: null
+  shape_type: "type"
+
 annotation:
   # drawing
   line_color: [0, 255, 0, 128]

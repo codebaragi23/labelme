@@ -12,7 +12,7 @@ from setuptools import setup
 
 
 def get_version():
-  filename = "labelme/__init__.py"
+  filename = "mindAT/__init__.py"
   with open(filename) as f:
     match = re.search(
       r"""^__version__ = ['"]([^'"]*)['"]""", f.read(), re.M
@@ -84,7 +84,7 @@ def get_long_description():
     import github2pypi
 
     return github2pypi.replace_url(
-      slug="codebaragi23/labelme", content=long_description
+      slug="codebaragi23/mindAT", content=long_description
     )
   except Exception:
     return long_description
@@ -102,18 +102,18 @@ def main():
       sys.exit(1)
 
     commands = [
-      "python tests/docs_tests/man_tests/test_labelme_1.py",
+      "python tests/docs_tests/man_tests/test_mindAT_1.py",
       "git tag v{:s}".format(version),
       "git push origin master --tag",
       "python setup.py sdist",
-      "twine upload dist/labelme-{:s}.tar.gz".format(version),
+      "twine upload dist/mindAT-{:s}.tar.gz".format(version),
     ]
     for cmd in commands:
       subprocess.check_call(shlex.split(cmd))
     sys.exit(0)
 
   setup(
-    name="labelme",
+    name="mindAT",
     version=version,
     packages=find_packages(exclude=["github2pypi"]),
     description="Image Polygonal Annotation with Python",
@@ -121,7 +121,7 @@ def main():
     long_description_content_type="text/markdown",
     author="Kentaro Wada",
     author_email="www.kentaro.wada@gmail.com",
-    url="https://github.com/codebaragi23/labelme",
+    url="https://github.com/codebaragi23/mindAT",
     install_requires=get_install_requires(),
     license="GPLv3",
     keywords="Image Annotation, Machine Learning",
@@ -137,17 +137,17 @@ def main():
       "Programming Language :: Python :: Implementation :: CPython",
       "Programming Language :: Python :: Implementation :: PyPy",
     ],
-    package_data={"labelme": ["icons/*", "config/*.yaml"]},
+    package_data={"mindAT": ["icons/*", "config/*.yaml"]},
     entry_points={
       "console_scripts": [
-        "labelme=labelme.__main__:main",
-        "labelme_draw_json=labelme.cli.draw_json:main",
-        "labelme_draw_label_png=labelme.cli.draw_label_png:main",
-        "labelme_json_to_dataset=labelme.cli.json_to_dataset:main",
-        "labelme_on_docker=labelme.cli.on_docker:main",
+        "mindAT=mindAT.__main__:main",
+        "mindAT_draw_json=mindAT.cli.draw_json:main",
+        "mindAT_draw_label_png=mindAT.cli.draw_label_png:main",
+        "mindAT_json_to_dataset=mindAT.cli.json_to_dataset:main",
+        "mindAT_on_docker=mindAT.cli.on_docker:main",
       ],
     },
-    data_files=[("share/man/man1", ["docs/man/labelme.1"])],
+    data_files=[("share/man/man1", ["docs/man/mindAT.1"])],
   )
 
 

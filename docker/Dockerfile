@@ -18,10 +18,10 @@ RUN /bin/bash install_korean-language.sh
 
 RUN pip3 install -U -r requirements.txt
 # RUN rm /requirements.txt
-# RUN pip3 install -v git+https://github.com/codebaragi23/labelme.git
+# RUN pip3 install -v git+https://github.com/codebaragi23/mindAT.git
 
 RUN mkdir /root/workspace
 # ENV LANG en-US
 
 WORKDIR /root/workspace
-# ENTRYPOINT [ "labelme" ]
+# ENTRYPOINT [ "mindAT" ]

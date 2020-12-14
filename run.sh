@@ -1,1 +1,0 @@
-python3 pixmap-to-geojson.py --input GT/ --config GT/config.json

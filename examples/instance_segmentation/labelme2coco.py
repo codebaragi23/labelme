@@ -13,7 +13,7 @@ import uuid
 import imgviz
 import numpy as np
 
-import labelme
+import mindAT
 
 try:
     import pycocotools.mask
@@ -85,12 +85,12 @@ def main():
     for image_id, filename in enumerate(label_files):
         print("Generating dataset from:", filename)
 
-        label_file = labelme.LabelFile(filename=filename)
+        label_file = mindAT.LabelFile(filename=filename)
 
         base = osp.splitext(osp.basename(filename))[0]
         out_img_file = osp.join(args.output_dir, "JPEGImages", base + ".jpg")
 
-        img = labelme.utils.img_data_to_arr(label_file.imageData)
+        img = mindAT.utils.img_data_to_arr(label_file.imageData)
         imgviz.io.imsave(out_img_file, img)
         data["images"].append(
             dict(
@@ -111,7 +111,7 @@ def main():
             label = annotation["label"]
             group_id = annotation.get("group_id")
             shape_type = annotation.get("shape_type", "polygon")
-            mask = labelme.utils.shape_to_mask(
+            mask = mindAT.utils.shape_to_mask(
                 img.shape[:2], points, shape_type
             )
 
