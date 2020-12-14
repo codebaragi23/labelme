@@ -6,9 +6,9 @@ import numpy as np
 import PIL.Image
 import PIL.ImageDraw
 
-from labelme.logger import logger
-from labelme.annotation import Annotation
-from labelme import PY2
+from mindAT.logger import logger
+from mindAT.annotation import Annotation
+from mindAT import PY2
 
 from qtpy import QtCore
 

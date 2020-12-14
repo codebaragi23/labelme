@@ -8,11 +8,11 @@ import cv2
 import PIL.Image
 import tifffile
 
-from labelme import __version__
-from labelme.logger import logger
-from labelme import PY2
-from labelme import QT4
-from labelme import utils
+from mindAT import __version__
+from mindAT.logger import logger
+from mindAT import PY2
+from mindAT import QT4
+from mindAT import utils
 
 PIL.Image.MAX_IMAGE_PIXELS = None
 
@@ -32,9 +32,9 @@ def open(name, mode):
 class LabelFileError(Exception):
   pass
 
-def LabelFileFromGeo(geo, geo_transfrom):
+def LabelFileFromGeo(geo, geo_transfrom, config=None):
   labelFile = LabelFile()
-  labelFile.fromGeo(geo, geo_transfrom)
+  labelFile.fromGeo(geo, geo_transfrom, config)
   return labelFile
 
 class LabelFile(object):
@@ -49,7 +49,7 @@ class LabelFile(object):
     self.filename = filename
 
   @staticmethod
-  def load_image_file(filename):
+  def load_image_file(filename, real_bitdepth=8):
     ext = osp.splitext(filename)[1].lower()
 
     import numpy as np
@@ -61,9 +61,11 @@ class LabelFile(object):
         if image.shape[0] == 3:
           image = image.transpose(1,2,0)
 
-        #image = (image/32).clip(0, 255)
+        if real_bitdepth > 8:
+          diff_bitdepth = real_bitdepth-8
+          image = (image/(1<<diff_bitdepth)).clip(0, 255)
+          
         image = image.astype("uint8")
-        #image = image[:,:,:3]
         image_pil = PIL.Image.fromarray(image)
       else:
         image_pil = PIL.Image.open(filename)
@@ -85,7 +87,7 @@ class LabelFile(object):
       f.seek(0)
       return f.read()
 
-  def fromGeo(self, data, geo_transfrom):
+  def fromGeo(self, data, geo_transfrom, config=None):
     keys = [
       "features",  # polygonal annotations
     ]
@@ -134,11 +136,11 @@ class LabelFile(object):
 
     annotations = []
     for feature in data["features"]:
-      if feature["geometry"]["type"].lower() == "multipolygon":
+      if feature["geometry"][config["shape_type"]].lower() == "multipolygon":
         multilen = len(feature["geometry"]["coordinates"])
         for i in range(multilen-1):
           annot = dict(
-            label=str(feature["properties"]["ann_name"]),
+            label=str(feature["properties"][config["prop_ann_name"]]),
             shape_type="polygon",
             points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][i][0]],
             
@@ -151,7 +153,7 @@ class LabelFile(object):
           annotations.append(annot)
 
         annot = dict(
-          label=str(feature["properties"]["ann_name"]),
+          label=str(feature["properties"][config["prop_ann_name"]]),
           shape_type="polygon",
           points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
           
@@ -163,10 +165,9 @@ class LabelFile(object):
         )
       else:
         annot = dict(
-          label=str(feature["properties"]["ann_name"]),
-          shape_type=feature["geometry"]["type"].lower(),
-          #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-          points=[[x, y] for x, y in feature["geometry"]["coordinates"][0]],
+          label=str(feature["properties"][config["prop_ann_name"]]),
+          shape_type=feature["geometry"][config["shape_type"]].lower(),
+          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
           
           flags=feature.get("flags", {}),
           group_id=feature.get("group_id", None),
@@ -175,55 +176,6 @@ class LabelFile(object):
           },
         )
       annotations.append(annot)
-
-    # annotations = []
-    # for feature in data["features"]:
-    #   if feature["geometry"]["type"].lower() == "multipolygon":
-    #     multilen = len(feature["geometry"]["coordinates"])
-    #     for i in range(multilen-1):
-    #       annot = dict(
-    #         #label=str(feature["properties"]["ann_name"]),
-    #         label=str(feature["properties"]["작물종류"]),
-    #         shape_type="polygon",
-    #         #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][i][0]],
-    #         points=[[x*3.85, -y*4.67] for x, y in feature["geometry"]["coordinates"][i][0]],
-            
-    #         flags=feature.get("flags", {}),
-    #         group_id=feature.get("group_id", None),
-    #         other_data={
-    #           k:v for k, v in feature.items() if k not in annotation_keys
-    #         },
-    #       )
-    #       annotations.append(annot)
-
-    #     annot = dict(
-    #       #label=str(feature["properties"]["ann_name"]),
-    #       label=str(feature["properties"]["작물종류"]),
-    #       shape_type="polygon",
-    #       #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
-    #       points=[[x*3.85, -y*4.67] for x, y in feature["geometry"]["coordinates"][multilen-1][0]],
-          
-    #       flags=feature.get("flags", {}),
-    #       group_id=feature.get("group_id", None),
-    #       other_data={
-    #         k:v for k, v in feature.items() if k not in annotation_keys
-    #       },
-    #     )
-    #   else:
-    #     annot = dict(
-    #       #label=str(feature["properties"]["ann_name"]),
-    #       label=str(feature["properties"]["작물종류"]),
-    #       shape_type=feature["geometry"]["type"].lower(),
-    #       #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-    #       points=[[x, -y] for x, y in feature["geometry"]["coordinates"][0]],
-          
-    #       flags=feature.get("flags", {}),
-    #       group_id=feature.get("group_id", None),
-    #       other_data={
-    #         k:v for k, v in feature.items() if k not in annotation_keys
-    #       },
-    #     )
-    #   annotations.append(annot)
 
     otherData = {k:v for k, v in data.items() if k not in keys}
     
@@ -265,7 +217,7 @@ class LabelFile(object):
         elif version.split(".")[0] != __version__.split(".")[0]:
           logger.warn(
             "This JSON file ({}) may be incompatible with "
-            "current labelme. version in file: {}, "
+            "current mindAT. version in file: {}, "
             "current version: {}".format(
               filename, version, __version__
             )
@@ -275,10 +227,10 @@ class LabelFile(object):
         imageData = base64.b64decode(data["imageData"])
         if PY2 and QT4:
           imageData = utils.img_data_to_png_data(imageData)
-      elif data["imagePath"] is not None:
-        # relative path from label file to relative path from cwd
-        imagePath = osp.join(osp.dirname(filename), data["imagePath"])
-        imageData = self.load_image_file(imagePath)
+      # elif data["imagePath"] is not None:
+      #   # relative path from label file to relative path from cwd
+      #   imagePath = osp.join(osp.dirname(filename), data["imagePath"])
+      #   imageData = self.load_image_file(imagePath)
       else:
         imageData = None
 

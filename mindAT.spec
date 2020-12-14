@@ -8,12 +8,13 @@ sys.setrecursionlimit(5000)  # required on Windows
 
 
 a = Analysis(
-  ['labelme/__main__.py'],
-  pathex=['labelme'],
+  ['mindAT/__main__.py'],
+  pathex=['mindAT', '/usr/lib/python3.6/dist-packages/cv2/python-3.6', '/usr/share/gdal/2.2/'],
   binaries=[],
   datas=[
-    ('labelme/config/default_config.yaml', 'labelme/config'),
-    ('labelme/icons/*', 'labelme/icons'),
+    ('mindAT/config/default_config.yaml', 'mindAT/config'),
+    ('mindAT/icons/*', 'mindAT/icons',),
+    ('mindAT/translate/*', 'mindAT/translate',),
   ],
   hiddenimports=[],
   hookspath=[],
@@ -27,18 +28,18 @@ exe = EXE(
   a.binaries,
   a.zipfiles,
   a.datas,
-  name='labelme',
+  name='mindAT',
   debug=False,
   strip=False,
   upx=True,
   runtime_tmpdir=None,
   console=False,
-  icon='labelme/icons/icon.ico',
+  icon='mindAT/icons/icon.ico',
 )
 app = BUNDLE(
   exe,
   name='Labelme.app',
-  icon='labelme/icons/icon.icns',
+  icon='mindAT/icons/icon.icns',
   bundle_identifier=None,
   info_plist={'NSHighResolutionCapable': 'True'},
 )

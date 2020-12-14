@@ -2,12 +2,12 @@ from qtpy import QtCore
 from qtpy import QtGui
 from qtpy import QtWidgets
 
-from labelme import QT5
-from labelme.annotation import Annotation
-from labelme.widgets import AppearanceWidget
+from mindAT import QT5
+from mindAT.annotation import Annotation
+from mindAT.widgets import AppearanceWidget
 
-import labelme.utils
-import labelme.eval
+import mindAT.utils
+import mindAT.eval
 
 import cv2
 import numpy as np
@@ -616,16 +616,16 @@ class Canvas(QtWidgets.QWidget):
 
       eval_text = ""
       if self.eval_method == AppearanceWidget.EVAL_PIXEL_ACCURACY:
-        eval_val = labelme.eval.pixel_accuracy(eval, gt)
+        eval_val = mindAT.eval.pixel_accuracy(eval, gt)
         eval_text = " Pixel accuracy: %d%%" % round(eval_val*100)
       elif self.eval_method == AppearanceWidget.EVAL_MEAN_ACCURACY:
-        eval_val = labelme.eval.mean_accuracy(eval, gt)
+        eval_val = mindAT.eval.mean_accuracy(eval, gt)
         eval_text = " Mean accuracy: %d%%" % round(eval_val*100)
       elif self.eval_method == AppearanceWidget.EVAL_MEAN_IOU:
-        eval_val = labelme.eval.mean_IoU(eval, gt)
+        eval_val = mindAT.eval.mean_IoU(eval, gt)
         eval_text = " Mean IoU: %d%%" % round(eval_val*100)
       elif self.eval_method == AppearanceWidget.EVAL_FREQUENCY_WEIGHTED_IOU:
-        eval_val = labelme.eval.frequency_weighted_IoU(eval, gt)
+        eval_val = mindAT.eval.frequency_weighted_IoU(eval, gt)
         eval_text = " Frequency Weighted IoU: %d%%" % round(eval_val*100)
 
       fm = QtGui.QFontMetrics(p.font())
@@ -693,7 +693,7 @@ class Canvas(QtWidgets.QWidget):
     # m = (p1-p2).manhattanLength()
     # print "d %.2f, m %d, %.2f" % (d, m, d - m)
     # divide by scale to allow more precision when zoomed in
-    return labelme.utils.distance(p1 - p2) < (self.epsilon / self.scale)
+    return mindAT.utils.distance(p1 - p2) < (self.epsilon / self.scale)
 
   def intersectionPoint(self, p1, p2):
     # Cycle through each image edge in clockwise fashion,
@@ -747,7 +747,7 @@ class Canvas(QtWidgets.QWidget):
         x = x1 + ua * (x2 - x1)
         y = y1 + ua * (y2 - y1)
         m = QtCore.QPoint((x3 + x4) / 2, (y3 + y4) / 2)
-        d = labelme.utils.distance(m - QtCore.QPoint(x2, y2))
+        d = mindAT.utils.distance(m - QtCore.QPoint(x2, y2))
         yield d, i, (x, y)
 
   # These two, along with a call to adjustSize are required for the

@@ -28,27 +28,27 @@ from qtpy.QtCore import Slot
 from qtpy import QtGui
 from qtpy import QtWidgets
 
-from labelme import __appname__
-from labelme import __version__
-from labelme import PY2
-from labelme import QT5
+from mindAT import __appname__
+from mindAT import __version__
+from mindAT import PY2
+from mindAT import QT5
 
 from . import utils
-from labelme.config import get_config
-from labelme.label_file import LabelFile
-from labelme.label_file import LabelFileFromGeo
-from labelme.label_file import LabelFileError
-from labelme.logger import logger
-from labelme.annotation import Annotation
-from labelme.widgets import AppearanceWidget
-from labelme.widgets import Canvas
-from labelme.widgets import LabelDialog
-from labelme.widgets import AnnotationListWidget
-from labelme.widgets import AnnotationListWidgetItem
-from labelme.widgets import ToolBar
-from labelme.widgets import LabelQListWidget
-from labelme.widgets import ZoomWidget
-from labelme.widgets import QJsonTreeWidget
+from mindAT.config import get_config
+from mindAT.label_file import LabelFile
+from mindAT.label_file import LabelFileFromGeo
+from mindAT.label_file import LabelFileError
+from mindAT.logger import logger
+from mindAT.annotation import Annotation
+from mindAT.widgets import AppearanceWidget
+from mindAT.widgets import Canvas
+from mindAT.widgets import LabelDialog
+from mindAT.widgets import AnnotationListWidget
+from mindAT.widgets import AnnotationListWidgetItem
+from mindAT.widgets import ToolBar
+from mindAT.widgets import LabelQListWidget
+from mindAT.widgets import ZoomWidget
+from mindAT.widgets import QJsonTreeWidget
 
 # FIXME
 # - [medium] Set max zoom value to something big enough for FitWidth/Window
@@ -64,6 +64,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
   FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
   RESTART_CODE = 0x1234
+  RESET_CONFIG = 0x4321
 
   def __init__(
     self,
@@ -81,8 +82,8 @@ class MainWindow(QtWidgets.QMainWindow):
       if output_file is None:
         output_file = output
 
-    # see labelme/config/default_config.yaml for valid configuration
-    # save default config to ~/.labelmerc
+    # see mindAT/config/default_config.yaml for valid configuration
+    # save default config to ~/.mindATrc
     if config is None:
       config = get_config()
     self._config = config
@@ -281,7 +282,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.tr(u"Open Dir"),
     )
     openNextImg = action(
-      self.tr("&Next Image"),
+      self.tr("Next Image"),
       self.openNextImg,
       shortcuts["open_next"],
       "next",
@@ -289,7 +290,7 @@ class MainWindow(QtWidgets.QMainWindow):
       enabled=False,
     )
     openPrevImg = action(
-      self.tr("&Prev Image"),
+      self.tr("Prev Image"),
       self.openPrevImg,
       shortcuts["open_prev"],
       "prev",
@@ -353,6 +354,12 @@ class MainWindow(QtWidgets.QMainWindow):
       slot=self.onChangeLanguage,
       icon="translate",
       tip=self.tr(u"Change display language"),
+    )
+
+    reloadConfiguration = action(
+      text=self.tr("Reload &Configuration"),
+      slot=self.onReloadConfig,
+      tip=self.tr(u"Reload configuration from configuraton file"),
     )
 
     close = action(
@@ -818,6 +825,7 @@ class MainWindow(QtWidgets.QMainWindow):
       (
         changeOutputDir,
         changeLanguage,
+        reloadConfiguration,
       ),
     )
 
@@ -974,8 +982,8 @@ class MainWindow(QtWidgets.QMainWindow):
     # XXX: Could be completely declarative.
     # Restore application settings.
 
-    # /$HOME/.config/labelme
-    self.settings = QtCore.QSettings("labelme", "labelme")
+    # /$HOME/.config/mindAT
+    self.settings = QtCore.QSettings("mindAT", "mindAT")
 
     # FIXME: QSettings.value can return None on PyQt4
     self.recentFiles = self.settings.value("recentFiles", []) or []
@@ -1065,7 +1073,6 @@ class MainWindow(QtWidgets.QMainWindow):
     return menu
 
   # Support Functions
-
   def noAnnotations(self):
     return not len(self.annotList)
 
@@ -1165,7 +1172,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.actions.undo.setEnabled(self.canvas.isAnnotationRestorable)
 
   def tutorial(self):
-    url = "https://github.com/codebaragi23/labelme/tree/master/examples/tutorial"  # NOQA
+    url = "https://github.com/codebaragi23/mindAT/tree/master/examples/tutorial"  # NOQA
     webbrowser.open(url)
 
   def toggleDrawingSensitive(self, drawing=True):
@@ -1612,7 +1619,7 @@ class MainWindow(QtWidgets.QMainWindow):
       )
   
     if labelFile.imageData is None:
-      labelFile.imageData = LabelFile.load_image_file(imagename)
+      labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
       imagePath = imagename
     
     return labelFile, imagePath
@@ -1676,8 +1683,8 @@ class MainWindow(QtWidgets.QMainWindow):
       
       g = gdal.Open(filename)
       geo_transfrom =  g.GetGeoTransform()
-      self.labelFile = LabelFileFromGeo(geo, geo_transfrom)
-      self.labelFile.imageData = LabelFile.load_image_file(filename)
+      self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
+      self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.labelFile.filename = label_file
       self.labelFile.imagePath = filename
       self.imagePath = filename
@@ -1691,14 +1698,14 @@ class MainWindow(QtWidgets.QMainWindow):
       
       g = gdal.Open(filename)
       geo_transfrom =  g.GetGeoTransform()
-      self.labelFile = LabelFileFromGeo(geo, geo_transfrom)
-      self.labelFile.imageData = LabelFile.load_image_file(filename)
+      self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
+      self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.labelFile.filename = label_file
       self.labelFile.imagePath = filename
       self.imagePath = filename
       geolabel = True
     else:
-      self.imageData = LabelFile.load_image_file(filename)
+      self.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.imagePath = filename
 
     if self.labelFile:
@@ -2107,6 +2114,17 @@ class MainWindow(QtWidgets.QMainWindow):
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + languages.index(language))
 
   @Slot()
+  def onReloadConfig(self):
+    mb = QtWidgets.QMessageBox
+    msg = self.tr(
+      "Discard all changes in memory and reload everthing from file,"
+      "proceed anyway?"
+    )
+    answer = mb.warning(self, self.tr("Attention"), msg, mb.Yes | mb.No)
+    if not answer == mb.Yes:      return
+    QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + MainWindow.RESET_CONFIG)
+
+  @Slot()
   def onExportPixelMap(self):
     if not self.output_dir:   self.onChangeOutputDir()
     if not self.output_dir:   return False
@@ -2168,7 +2186,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename)
+        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
 
       img = utils.img_data_to_arr(labelFile.imageData)
       cls, ins = utils.annotations_to_label(
@@ -2196,7 +2214,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename)
+        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
 
       img = utils.img_data_to_arr(labelFile.imageData)
       imgviz.io.imsave(out_img_file, img)
@@ -2286,7 +2304,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename)
+        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
 
       img = utils.img_data_to_arr(labelFile.imageData)
       imgviz.io.imsave(out_img_file, img)
@@ -2438,7 +2456,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename)
+        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
 
       img = utils.img_data_to_arr(labelFile.imageData)
       imgviz.io.imsave(out_img_file, img)
