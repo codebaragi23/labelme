@@ -57,7 +57,7 @@ def mean_accuracy(eval_segm, gt_segm):
     mean_accuracy_ = np.mean(accuracy)
     return mean_accuracy_
 
-def mean_IU(eval_segm, gt_segm):
+def mean_IoU(eval_segm, gt_segm):
     '''
     (1/n_cl) * sum_i(n_ii / (t_i + sum_j(n_ji) - n_ii))
     '''
@@ -86,7 +86,7 @@ def mean_IU(eval_segm, gt_segm):
     mean_IU_ = np.sum(IU) / n_cl_gt
     return mean_IU_
 
-def frequency_weighted_IU(eval_segm, gt_segm):
+def frequency_weighted_IoU(eval_segm, gt_segm):
     '''
     sum_k(t_k)^(-1) * sum_i((t_i*n_ii)/(t_i + sum_j(n_ji) - n_ii))
     '''
@@ -129,7 +129,8 @@ def extract_both_masks(eval_segm, gt_segm, cl, n_cl):
     return eval_mask, gt_mask
 
 def extract_classes(segm):
-    cl = np.unique(segm)
+    cl = list(np.unique(segm))
+    cl.remove(0)
     n_cl = len(cl)
 
     return cl, n_cl

@@ -20,11 +20,11 @@ class LabelQLineEdit(QtWidgets.QLineEdit):
     def setListWidget(self, list_widget):
         self.list_widget = list_widget
 
-    def keyPressEvent(self, e):
-        if e.key() in [QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
-            self.list_widget.keyPressEvent(e)
+    def keyPressEvent(self, event):
+        if event.key() in [QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
+            self.list_widget.keyPressEvent(event)
         else:
-            super(LabelQLineEdit, self).keyPressEvent(e)
+            super(LabelQLineEdit, self).keyPressEvent(event)
 
 
 class LabelDialog(QtWidgets.QDialog):
