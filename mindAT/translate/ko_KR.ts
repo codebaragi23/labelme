@@ -323,6 +323,11 @@
     </message>
     <message>
         <location filename="../app.py" line="378"/>
+        <source>Move</source>
+        <translation>이동</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="378"/>
         <source>Edit Annotations</source>
         <translation>주석 편집</translation>
     </message>

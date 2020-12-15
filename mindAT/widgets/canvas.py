@@ -14,8 +14,6 @@ import numpy as np
 
 # TODO(unknown):
 # - [maybe] Find optimal epsilon value.
-
-
 DEFAULT_TEXT_COLOR = QtGui.QColor(0, 0, 0)
 DEFAULT_TEXT_BACKGROUND_COLOR = QtGui.QColor(128, 128, 128, 156)
 
@@ -95,12 +93,6 @@ class Canvas(QtWidgets.QWidget):
     # Set widget options.
     self.setMouseTracking(True)
     self.setFocusPolicy(QtCore.Qt.WheelFocus)
-
-  def fillDrawing(self):
-    return self._fill_drawing
-
-  def setFillDrawing(self, value):
-    self._fill_drawing = value
 
   def setEvalMethod(self, method):
     self.eval_method = method
@@ -657,8 +649,7 @@ class Canvas(QtWidgets.QWidget):
         s.paint(p)
 
     if (
-      self.fillDrawing()
-      and self.createMode == "polygon"
+      self.createMode == "polygon"
       and self.current is not None
       and len(self.current.points) >= 2
     ):

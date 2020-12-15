@@ -38,7 +38,7 @@ def LabelFileFromGeo(geo, geo_transfrom, config=None):
   return labelFile
 
 class LabelFile(object):
-  suffix = ".json"
+  suffix = ".geojson"
 
   def __init__(self, filename=None):
     self.annotations = []

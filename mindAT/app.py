@@ -151,20 +151,20 @@ class MainWindow(QtWidgets.QMainWindow):
     self.file_dock.setObjectName(u"Files")
     self.file_dock.setWidget(fileListWidget)
 
-    self.appearance_widget = AppearanceWidget(self.onAppearanceChangedCallback)
-    self.appearance_widget.setEnabled(False)
-    self.appe_dock = QtWidgets.QDockWidget(self.tr(u"Appearance"), self)
-    self.appe_dock.setObjectName(u"Appearance")
-    self.appe_dock.setWidget(self.appearance_widget)
+    # self.appearance_widget = AppearanceWidget(self.onAppearanceChangedCallback)
+    # self.appearance_widget.setEnabled(False)
+    # self.appe_dock = QtWidgets.QDockWidget(self.tr(u"Appearance"), self)
+    # self.appe_dock.setObjectName(u"Appearance")
+    # self.appe_dock.setWidget(self.appearance_widget)
     
-    self.flag_dock = self.flag_widget = None
-    self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
-    self.flag_dock.setObjectName("Flags")
-    self.flag_widget = QtWidgets.QListWidget()
-    if config["flags"]:
-      self.loadFlags({k: False for k in config["flags"]})
-    self.flag_dock.setWidget(self.flag_widget)
-    self.flag_widget.itemChanged.connect(self.setDirty)
+    # self.flag_dock = self.flag_widget = None
+    # self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
+    # self.flag_dock.setObjectName("Flags")
+    # self.flag_widget = QtWidgets.QListWidget()
+    # if config["flags"]:
+    #   self.loadFlags({k: False for k in config["flags"]})
+    # self.flag_dock.setWidget(self.flag_widget)
+    # self.flag_widget.itemChanged.connect(self.setDirty)
 
     self.labelList = LabelQListWidget()
     self.labelList.setToolTip(
@@ -205,10 +205,10 @@ class MainWindow(QtWidgets.QMainWindow):
     self.label_dock.setObjectName(u"Labels")
     self.label_dock.setWidget(labelListWidget)
 
-    self.annotatorInfosWidget = QJsonTreeWidget()
-    self.annotator_dock = QtWidgets.QDockWidget(self.tr(u"Annotator"), self)
-    self.annotator_dock.setObjectName(u"Annotator")
-    self.annotator_dock.setWidget(self.annotatorInfosWidget)
+    # self.annotatorInfosWidget = QJsonTreeWidget()
+    # self.annotator_dock = QtWidgets.QDockWidget(self.tr(u"Annotator"), self)
+    # self.annotator_dock.setObjectName(u"Annotator")
+    # self.annotator_dock.setWidget(self.annotatorInfosWidget)
 
     self.zoomWidget = ZoomWidget()
     self.setAcceptDrops(True)
@@ -233,14 +233,13 @@ class MainWindow(QtWidgets.QMainWindow):
     self.canvas.selectionChanged.connect(self.annotationSelectionChanged)
     self.canvas.drawingPolygon.connect(self.toggleDrawingSensitive)
 
-    self.appearance_widget.evalComb.currentIndexChanged.connect(lambda:self.canvas.setEvalMethod(self.appearance_widget.evalComb.currentIndex()))
+    #self.appearance_widget.evalComb.currentIndexChanged.connect(lambda:self.canvas.setEvalMethod(self.appearance_widget.evalComb.currentIndex()))
 
     self.setCentralWidget(scrollArea)
 
     features = QtWidgets.QDockWidget.DockWidgetFeatures()
-    for dock in ["file_dock", "flag_dock", "label_dock", "annotator_dock"]:
-      if not hasattr(self, dock):
-        continue;
+    #for dock in ["file_dock", "flag_dock", "label_dock", "annotator_dock"]:
+    for dock in ["file_dock", "label_dock"]:
       if self._config[dock]["closable"]:
         features = features | QtWidgets.QDockWidget.DockWidgetClosable
       if self._config[dock]["floatable"]:
@@ -253,16 +252,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.setTabPosition(Qt.RightDockWidgetArea, QtWidgets.QTabWidget.North)
     
-    if hasattr(self, "file_dock"):
-      self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
-    if hasattr(self, "file_dock") and hasattr(self, "annotator_dock"):
-      self.tabifyDockWidget(self.file_dock, self.annotator_dock)
-    if hasattr(self, "appe_dock"):
-      self.addDockWidget(Qt.LeftDockWidgetArea, self.appe_dock)
-    if hasattr(self, "label_dock"):
-      self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
-    if hasattr(self, "label_dock") and hasattr(self, "flag_dock"):
-      self.tabifyDockWidget(self.label_dock, self.flag_dock)
+    #self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
+    #self.tabifyDockWidget(self.file_dock, self.annotator_dock)
+    #self.addDockWidget(Qt.LeftDockWidgetArea, self.appe_dock)
+    self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
+    #self.tabifyDockWidget(self.label_dock, self.flag_dock)
     
     # Actions
     action = functools.partial(utils.newAction, self)
@@ -395,51 +389,51 @@ class MainWindow(QtWidgets.QMainWindow):
       enabled=False,
       checkable=True,
     )
-    createRectangleMode = action(
-      text=self.tr("Create Rectangle"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createRectangleMode),
-      shortcut=shortcuts["create_rectangle"],
-      icon="rectangle",
-      tip=self.tr("Start drawing rectangles"),
-      enabled=False,
-      checkable=True,
-    )
-    createCircleMode = action(
-      text=self.tr("Create Circle"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createCircleMode),
-      shortcut=shortcuts["create_circle"],
-      icon="circle",
-      tip=self.tr("Start drawing circles"),
-      enabled=False,
-      checkable=True,
-    )
-    createLineMode = action(
-      text=self.tr("Create Line"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createLineMode),
-      shortcut=shortcuts["create_line"],
-      icon="line",
-      tip=self.tr("Start drawing lines"),
-      enabled=False,
-      checkable=True,
-    )
-    createPointMode = action(
-      text=self.tr("Create Point"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createPointMode),
-      shortcut=shortcuts["create_point"],
-      icon="point",
-      tip=self.tr("Start drawing points"),
-      enabled=False,
-      checkable=True,
-    )
-    createLineStripMode = action(
-      text=self.tr("Create LineStrip"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createLineStripMode),
-      shortcut=shortcuts["create_linestrip"],
-      icon="line_strip",
-      tip=self.tr("Start drawing linestrip (Ctrl+LeftClick ends creation)"),
-      enabled=False,
-      checkable=True,
-    )
+    # createRectangleMode = action(
+    #   text=self.tr("Create Rectangle"),
+    #   slot=lambda: self.onToggleDrawMode(self.actions.createRectangleMode),
+    #   shortcut=shortcuts["create_rectangle"],
+    #   icon="rectangle",
+    #   tip=self.tr("Start drawing rectangles"),
+    #   enabled=False,
+    #   checkable=True,
+    # )
+    # createCircleMode = action(
+    #   text=self.tr("Create Circle"),
+    #   slot=lambda: self.onToggleDrawMode(self.actions.createCircleMode),
+    #   shortcut=shortcuts["create_circle"],
+    #   icon="circle",
+    #   tip=self.tr("Start drawing circles"),
+    #   enabled=False,
+    #   checkable=True,
+    # )
+    # createLineMode = action(
+    #   text=self.tr("Create Line"),
+    #   slot=lambda: self.onToggleDrawMode(self.actions.createLineMode),
+    #   shortcut=shortcuts["create_line"],
+    #   icon="line",
+    #   tip=self.tr("Start drawing lines"),
+    #   enabled=False,
+    #   checkable=True,
+    # )
+    # createPointMode = action(
+    #   text=self.tr("Create Point"),
+    #   slot=lambda: self.onToggleDrawMode(self.actions.createPointMode),
+    #   shortcut=shortcuts["create_point"],
+    #   icon="point",
+    #   tip=self.tr("Start drawing points"),
+    #   enabled=False,
+    #   checkable=True,
+    # )
+    # createLineStripMode = action(
+    #   text=self.tr("Create LineStrip"),
+    #   slot=lambda: self.onToggleDrawMode(self.actions.createLineStripMode),
+    #   shortcut=shortcuts["create_linestrip"],
+    #   icon="line_strip",
+    #   tip=self.tr("Start drawing linestrip (Ctrl+LeftClick ends creation)"),
+    #   enabled=False,
+    #   checkable=True,
+    # )
 
     movableMode = action(
       text=self.tr("Move"),
@@ -607,79 +601,68 @@ class MainWindow(QtWidgets.QMainWindow):
       enabled=False,
     )
 
-    fill_drawing = action(
-      self.tr("Fill Drawing Polygon"),
-      self.canvas.setFillDrawing,
-      None,
-      "color",
-      self.tr("Fill polygon while drawing"),
-      checkable=True,
-      enabled=True,
-    )
-    fill_drawing.trigger()
+    # exportPixel = action(
+    #   "Pixel Map",
+    #   slot=self.onExportPixelMap,
+    #   icon="export",
+    #   tip=self.tr("Export pixel labeling"),
+    #   enabled=False,
+    # )
 
-    exportPixel = action(
-      "Pixel Map",
-      slot=self.onExportPixelMap,
-      icon="export",
-      tip=self.tr("Export pixel labeling"),
-      enabled=False,
-    )
+    # exportVOC = action(
+    #   "VOC",
+    #   slot=self.onExportVOC,
+    #   icon="export",
+    #   tip=self.tr("Export VOC dataset format"),
+    #   enabled=False,
+    # )
 
-    exportVOC = action(
-      "VOC",
-      slot=self.onExportVOC,
-      icon="export",
-      tip=self.tr("Export VOC dataset format"),
-      enabled=False,
-    )
+    # exportCOCO = action(
+    #   "COCO",
+    #   slot=self.onExportCOCO,
+    #   icon="export",
+    #   tip=self.tr("Export COCO dataset format"),
+    #   enabled=False,
+    # )
 
-    exportCOCO = action(
-      "COCO",
-      slot=self.onExportCOCO,
-      icon="export",
-      tip=self.tr("Export COCO dataset format"),
-      enabled=False,
-    )
+    # evalAuto = action(
+    #   self.tr("&AI auto"),
+    #   slot=self.onEvalAI,
+    #   icon="ai",
+    #   tip=self.tr("Evaluation using AI automation engine"),
+    #   enabled=False,
+    #   checkable=True,
+    # )
 
-    evalAuto = action(
-      self.tr("&AI auto"),
-      slot=self.onEvalAI,
-      icon="ai",
-      tip=self.tr("Evaluation using AI automation engine"),
-      enabled=False,
-      checkable=True,
-    )
+    # openNextImageAfterEval = action(
+    #   text=self.tr("Next image after evaluation"),
+    #   slot=self.onEnableOpenNextImageAfterEval,
+    #   tip=self.tr("Open next image after evaluation"),
+    #   checkable=True,
+    #   checked=self._config["auto_open_next_eval"],
+    # )
 
-    openNextImageAfterEval = action(
-      text=self.tr("Next image after evaluation"),
-      slot=self.onEnableOpenNextImageAfterEval,
-      tip=self.tr("Open next image after evaluation"),
-      checkable=True,
-      checked=self._config["auto_open_next_eval"],
-    )
+    # evalPass = action(
+    #   text=self.tr("Pass"),
+    #   slot=lambda: self.onEvalJudgement(True),
+    #   tip=self.tr("Pass evaluation"),
+    #   enabled=False,
+    # )
 
-    evalPass = action(
-      text=self.tr("Pass"),
-      slot=lambda: self.onEvalJudgement(True),
-      tip=self.tr("Pass evaluation"),
-      enabled=False,
-    )
+    # evalFail = action(
+    #   text=self.tr("Fail"),
+    #   slot=lambda: self.onEvalJudgement(False),
+    #   tip=self.tr("Fail evaluation"),
+    #   enabled=False,
+    # )
 
-    evalFail = action(
-      text=self.tr("Fail"),
-      slot=lambda: self.onEvalJudgement(False),
-      tip=self.tr("Fail evaluation"),
-      enabled=False,
-    )
-
-    evalCheck = action(
-      self.tr("Evaluation"),
-      slot=lambda: self.onEvalJudgement(True if self.evalResCombo.currentIndex()==0 else False),
-      icon="evaluation",
-      tip=self.tr("Set evaluation result"),
-      enabled=False,
-    )
+    # evalCheck = action(
+    #   self.tr("Evaluation"),
+    #   slot=lambda: self.onEvalJudgement(True if self.evalResCombo.currentIndex()==0 else False),
+    #   icon="evaluation",
+    #   tip=self.tr("Set evaluation result"),
+    #   enabled=False,
+    # )
 
     # Lavel list context menu.
     labelMenu = QtWidgets.QMenu()
@@ -709,11 +692,11 @@ class MainWindow(QtWidgets.QMainWindow):
       removePoint=removePoint,
 
       createPolyMode=createPolyMode,
-      createRectangleMode=createRectangleMode,
-      createCircleMode=createCircleMode,
-      createLineMode=createLineMode,
-      createPointMode=createPointMode,
-      createLineStripMode=createLineStripMode,
+      # createRectangleMode=createRectangleMode,
+      # createCircleMode=createCircleMode,
+      # createLineMode=createLineMode,
+      # createPointMode=createPointMode,
+      # createLineStripMode=createLineStripMode,
 
       movableMode=movableMode,
 
@@ -731,11 +714,11 @@ class MainWindow(QtWidgets.QMainWindow):
       
       annotCheckableOperations=(
         createPolyMode,
-        createRectangleMode,
-        createCircleMode,
-        createLineMode,
-        createPointMode,
-        createLineStripMode,
+        # createRectangleMode,
+        # createCircleMode,
+        # createLineMode,
+        # createPointMode,
+        # createLineStripMode,
       ),
 
       extraCheckableOperations = (
@@ -774,31 +757,31 @@ class MainWindow(QtWidgets.QMainWindow):
       onLoadActive=(
         close,
         createPolyMode,
-        createRectangleMode,
-        createCircleMode,
-        createLineMode,
-        createPointMode,
-        createLineStripMode,
+        # createRectangleMode,
+        # createCircleMode,
+        # createLineMode,
+        # createPointMode,
+        # createLineStripMode,
       ),
       onAnnotationsPresent=(saveAs, hideAll, showAll),
-      exportDetectMenu=(
-        exportVOC,
-      ),
-      exportSegMenu=(
-        exportPixel,
-        exportVOC,
-        exportCOCO,
-      ),
+      # exportDetectMenu=(
+      #   exportVOC,
+      # ),
+      # exportSegMenu=(
+      #   exportPixel,
+      #   exportVOC,
+      #   exportCOCO,
+      # ),
 
-      evalAuto = evalAuto,
-      openNextImageAfterEval = openNextImageAfterEval,
-      evalTools = (
-        evalAuto,
-        evalPass,
-        evalFail,
-        evalCheck,
-        openNextImageAfterEval,
-      ),
+      # evalAuto = evalAuto,
+      # openNextImageAfterEval = openNextImageAfterEval,
+      # evalTools = (
+      #   evalAuto,
+      #   evalPass,
+      #   evalFail,
+      #   evalCheck,
+      #   openNextImageAfterEval,
+      # ),
     )
 
     self.canvas.edgeSelected.connect(self.canvasAnnotationEdgeSelected)
@@ -808,12 +791,12 @@ class MainWindow(QtWidgets.QMainWindow):
       file=self.menu(self.tr("&File")),
       edit=self.menu(self.tr("&Edit")),
       view=self.menu(self.tr("&View")),
-      data=self.menu(self.tr("&Dataset")),
-      evaluation=self.menu(self.tr("Ev&aluation")),
+      #data=self.menu(self.tr("&Dataset")),
+      #evaluation=self.menu(self.tr("Ev&aluation")),
       help=self.menu(self.tr("&Help")),
       recentFiles=QtWidgets.QMenu(self.tr("Open &Recent")),
       preferences=QtWidgets.QMenu(self.tr("&Preferences")),
-      export_=QtWidgets.QMenu(self.tr("&Export")),
+      #export_=QtWidgets.QMenu(self.tr("&Export")),
       labelList=labelMenu,
     )
     
@@ -852,13 +835,11 @@ class MainWindow(QtWidgets.QMainWindow):
     utils.addActions(
       self.menus.view,
       (
-        self.file_dock.toggleViewAction(),
-        self.appe_dock.toggleViewAction(),
-        self.flag_dock.toggleViewAction(),
+        #self.file_dock.toggleViewAction(),
+        #self.appe_dock.toggleViewAction(),
+        #self.flag_dock.toggleViewAction(),
         self.label_dock.toggleViewAction(),
-        self.annotator_dock.toggleViewAction(),
-        None,
-        fill_drawing,
+        #self.annotator_dock.toggleViewAction(),
         None,
         hideAll,
         showAll,
@@ -874,33 +855,33 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     #self.annotator_dock.toggleViewAction().setEnabled(False)
 
-    utils.addActions(
-      self.menus.data,
-      (
-        self.menus.export_,
-      ),
-    )
+    # utils.addActions(
+    #   self.menus.data,
+    #   (
+    #     self.menus.export_,
+    #   ),
+    # )
 
-    utils.addActions(
-      self.menus.export_,
-      (
-        exportPixel,
-        exportVOC,
-        exportCOCO,
-      ),
-    )
-    self.menus.export_.setEnabled(False)
+    # utils.addActions(
+    #   self.menus.export_,
+    #   (
+    #     exportPixel,
+    #     exportVOC,
+    #     exportCOCO,
+    #   ),
+    # )
+    # self.menus.export_.setEnabled(False)
 
-    utils.addActions(
-      self.menus.evaluation,
-      (
-        evalAuto,
-        evalPass,
-        evalFail,
-        None,
-        openNextImageAfterEval,
-      ),
-    )
+    # utils.addActions(
+    #   self.menus.evaluation,
+    #   (
+    #     evalAuto,
+    #     evalPass,
+    #     evalFail,
+    #     None,
+    #     openNextImageAfterEval,
+    #   ),
+    # )
 
     utils.addActions(self.menus.help, (help,))
 
@@ -918,21 +899,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.action_to_shape = {
       self.actions.createPolyMode : "polygon",
-      self.actions.createRectangleMode : "rectangle",
-      self.actions.createCircleMode : "circle",
-      self.actions.createLineMode : "line",
-      self.actions.createPointMode : "point",
-      self.actions.createLineStripMode : "linestrip",
+      # self.actions.createRectangleMode : "rectangle",
+      # self.actions.createCircleMode : "circle",
+      # self.actions.createLineMode : "line",
+      # self.actions.createPointMode : "point",
+      # self.actions.createLineStripMode : "linestrip",
     }
 
     # Menu buttons on Left
     self.actions.annotTool = (
       createPolyMode,
-      createRectangleMode,
-      createCircleMode,
-      createLineMode, 
-      createPointMode,
-      createLineStripMode,
+      # createRectangleMode,
+      # createCircleMode,
+      # createLineMode, 
+      # createPointMode,
+      # createLineStripMode,
       None,
       movableMode,
       None,
@@ -942,8 +923,8 @@ class MainWindow(QtWidgets.QMainWindow):
       None,
       zoom,
       fitWidth,
-      None,
-      evalAuto,
+      # None,
+      # evalAuto,
     )
 
     self.actions.filemenuTool = (
@@ -962,9 +943,9 @@ class MainWindow(QtWidgets.QMainWindow):
       openNextImg,
     )
 
-    self.actions.evalTool = (
-      evalCheck,
-    )
+    # self.actions.evalTool = (
+    #   evalCheck,
+    # )
 
     self.statusBar().showMessage(self.tr("%s started.") % __appname__)
     self.statusBar().show()
@@ -1018,7 +999,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.restoreState(
       self.settings.value("window/state", QtCore.QByteArray())
     )
-    self.file_dock.raise_()
+    #self.file_dock.raise_()
+    self.file_dock.hide()
 
     # Populate the File menu dynamically.
     self.updateFileMenu()
@@ -1065,22 +1047,22 @@ class MainWindow(QtWidgets.QMainWindow):
       toolbar.setStyleSheet("QToolButton { padding-left: 40px; padding-right: 40px; }")
       self.addToolBar(Qt.TopToolBarArea, toolbar)
 
-    if hasattr(self.actions, 'evalTool'):
-      toolbar = ToolBar("evalTool")
-      toolbar.setObjectName("evalTool-ToolBar")
-      toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
+    # if hasattr(self.actions, 'evalTool'):
+    #   toolbar = ToolBar("evalTool")
+    #   toolbar.setObjectName("evalTool-ToolBar")
+    #   toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
 
-      self.evalResCombo = QtWidgets.QComboBox()
-      self.evalResCombo.addItem(self.tr("Pass"))
-      self.evalResCombo.addItem(self.tr("Fail"))
-      self.evalResCombo.setEnabled(False)
-      toolbar.addWidget(self.evalResCombo)
-      self.actions.evalTools = self.actions.evalTools + tuple([self.evalResCombo])
-      self.evalResCombo.setToolTip(self.tr("Check evaluation result"))
+    #   self.evalResCombo = QtWidgets.QComboBox()
+    #   self.evalResCombo.addItem(self.tr("Pass"))
+    #   self.evalResCombo.addItem(self.tr("Fail"))
+    #   self.evalResCombo.setEnabled(False)
+    #   toolbar.addWidget(self.evalResCombo)
+    #   self.actions.evalTools = self.actions.evalTools + tuple([self.evalResCombo])
+    #   self.evalResCombo.setToolTip(self.tr("Check evaluation result"))
 
-      utils.addActions(toolbar, self.actions.evalTool)
-      toolbar.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
-      self.addToolBar(Qt.TopToolBarArea, toolbar)
+    #   utils.addActions(toolbar, self.actions.evalTool)
+    #   toolbar.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+    #   self.addToolBar(Qt.TopToolBarArea, toolbar)
 
     self.populateModeActions()
 
@@ -1126,7 +1108,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.dirty = False
     self.actions.save.setEnabled(False)
 
-    for action in self.actions.annotCheckableOperations + self.actions.extraCheckableOperations + self.actions.evalTools:
+    #for action in self.actions.annotCheckableOperations + self.actions.extraCheckableOperations + self.actions.evalTools:
+    for action in self.actions.annotCheckableOperations + self.actions.extraCheckableOperations:
       action.setEnabled(True)
     
     title = __appname__
@@ -1136,17 +1119,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
     if self.hasLabelFile():
       self.actions.deleteFile.setEnabled(True)
-      self.menus.export_.setEnabled(True)
+      #self.menus.export_.setEnabled(True)
     else:
       self.actions.deleteFile.setEnabled(False)
-      self.menus.export_.setEnabled(False)
+      #self.menus.export_.setEnabled(False)
 
   def toggleActions(self, value=True):
     """Enable/Disable widgets which depend on an opened image."""
     for z in self.actions.zoomActions:
       z.setEnabled(value)
 
-    for action in self.actions.onLoadActive + self.actions.evalTools:
+    #for action in self.actions.onLoadActive + self.actions.evalTools:
+    for action in self.actions.onLoadActive:
       action.setEnabled(value)
 
   def canvasAnnotationEdgeSelected(self, selected, annotation):
@@ -1170,7 +1154,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.workerFile = None
     self.otherData = None
     self.canvas.resetState()
-    self.annotatorInfosWidget.clear()
+    #self.annotatorInfosWidget.clear()
 
   def currentItem(self):
     items = self.annotList.selectedItems()
@@ -1268,7 +1252,8 @@ class MainWindow(QtWidgets.QMainWindow):
       )
       return
     annotation.label = text
-    annotation.flags = flags
+    #annotation.flags = flags
+    annotation.flags = None
     annotation.group_id = group_id
     if annotation.group_id is None:
       item.setText(annotation.label)
@@ -1397,24 +1382,24 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.loadAnnotations(annotations)
 
-  def loadFlags(self, flags):
-    self.flag_widget.clear()
-    for key, flag in flags.items():
-      item = QtWidgets.QListWidgetItem(key)
-      item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-      item.setCheckState(Qt.Checked if flag else Qt.Unchecked)
-      self.flag_widget.addItem(item)
+  # def loadFlags(self, flags):
+  #   self.flag_widget.clear()
+  #   for key, flag in flags.items():
+  #     item = QtWidgets.QListWidgetItem(key)
+  #     item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+  #     item.setCheckState(Qt.Checked if flag else Qt.Unchecked)
+  #     self.flag_widget.addItem(item)
 
   def saveLabels(self, filename):
     lf = LabelFile()
 
     annotations = [utils.annotation_to_dict(item.annotation()) for item in self.annotList]
-    flags = {}
-    for i in range(self.flag_widget.count()):
-      item = self.flag_widget.item(i)
-      key = item.text()
-      flag = item.checkState() == Qt.Checked
-      flags[key] = flag
+    #flags = {}
+    # for i in range(self.flag_widget.count()):
+    #   item = self.flag_widget.item(i)
+    #   key = item.text()
+    #   flag = item.checkState() == Qt.Checked
+    #   flags[key] = flag
     try:
       imagePath = osp.relpath(self.imagePath, osp.dirname(filename))
       imageData = self.imageData if self.actions.saveWithImageData.isChecked() else None
@@ -1428,7 +1413,7 @@ class MainWindow(QtWidgets.QMainWindow):
         imageHeight=self.image.height(),
         imageWidth=self.image.width(),
         otherData=self.otherData,
-        flags=flags,
+        #flags=flags,
       )
       self.labelFile = lf
       items = self.fileListWidget.findItems(
@@ -1460,15 +1445,15 @@ class MainWindow(QtWidgets.QMainWindow):
     self.canvas.activeAction = toggleAction
     self.canvas.setEditing(edit)
     self.canvas.createMode = createMode
-    if createMode == "polygon":
-      for action in self.actions.exportSegMenu:
-        action.setEnabled(True)
-    elif createMode == "rectangle":
-      for action in self.actions.exportDetectMenu:
-        action.setEnabled(True)
-    elif createMode == "circle":
-      for action in self.actions.exportDetectMenu:
-        action.setEnabled(True)
+    # if createMode == "polygon":
+    #   for action in self.actions.exportSegMenu:
+    #     action.setEnabled(True)
+    # elif createMode == "rectangle":
+    #   for action in self.actions.exportDetectMenu:
+    #     action.setEnabled(True)
+    # elif createMode == "circle":
+    #   for action in self.actions.exportDetectMenu:
+    #     action.setEnabled(True)
 
   def onToggleMoveMode(self):
     move=False
@@ -1605,25 +1590,25 @@ class MainWindow(QtWidgets.QMainWindow):
     self.zoomMode = self.FIT_WIDTH if value else self.MANUAL_ZOOM
     self.adjustScale()
 
-  def onAppearanceChangedCallback(self, brightness=1, contrast=1, show_pixelmap=None, show_groundtruth=None):
-    if show_groundtruth is not None:
-      self.canvas.show_groundtruth = show_groundtruth
-      self.canvas.repaint()
-      return
+  # def onAppearanceChangedCallback(self, brightness=1, contrast=1, show_pixelmap=None, show_groundtruth=None):
+  #   if show_groundtruth is not None:
+  #     self.canvas.show_groundtruth = show_groundtruth
+  #     self.canvas.repaint()
+  #     return
 
-    img = utils.img_data_to_pil(self.imageData)
-    if show_pixelmap:
-      img = ImageEnhance.Brightness(img).enhance(0)
-      self.canvas.show_pixelmap = True
-    else:
-      img = ImageEnhance.Brightness(img).enhance(brightness)
-      img = ImageEnhance.Contrast(img).enhance(contrast)
-      if show_pixelmap==False:
-        self.canvas.show_pixelmap = False
+  #   img = utils.img_data_to_pil(self.imageData)
+  #   if show_pixelmap:
+  #     img = ImageEnhance.Brightness(img).enhance(0)
+  #     self.canvas.show_pixelmap = True
+  #   else:
+  #     img = ImageEnhance.Brightness(img).enhance(brightness)
+  #     img = ImageEnhance.Contrast(img).enhance(contrast)
+  #     if show_pixelmap==False:
+  #       self.canvas.show_pixelmap = False
       
-    img_data = utils.img_pil_to_data(img)
-    qimage = QtGui.QImage.fromData(img_data)
-    self.canvas.loadPixmap(QtGui.QPixmap.fromImage(qimage))
+  #   img_data = utils.img_pil_to_data(img)
+  #   qimage = QtGui.QImage.fromData(img_data)
+  #   self.canvas.loadPixmap(QtGui.QPixmap.fromImage(qimage))
 
   def togglePolygons(self, value):
     for item in self.annotList:
@@ -1747,14 +1732,14 @@ class MainWindow(QtWidgets.QMainWindow):
       imageList = [self.imagePath]
       if len(self.imageList) > 0:      imageList = self.imageList
       annotations = self.labelFile.annotations
-      # bbox detection
-      if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
-        for action in self.actions.exportDetectMenu:
-          action.setEnabled(True)
-      # segmentation
-      elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
-        for action in self.actions.exportSegMenu:
-          action.setEnabled(True)
+      # # bbox detection
+      # if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+      #   for action in self.actions.exportDetectMenu:
+      #     action.setEnabled(True)
+      # # segmentation
+      # elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
+      #   for action in self.actions.exportSegMenu:
+      #     action.setEnabled(True)
 
     image = QtGui.QImage.fromData(self.imageData)
 
@@ -1774,16 +1759,16 @@ class MainWindow(QtWidgets.QMainWindow):
       return False
     self.image = image
     self.filename = filename
-    flags = {k: False for k in self._config["flags"] or []}
+    #flags = {k: False for k in self._config["flags"] or []}
     if self.labelFile:
       self.loadLabels(self.labelFile.annotations)
-      if len(self.labelFile.flags) > 0:
-        flags.update(self.labelFile.flags)
-        self.flag_dock.raise_()
-      else:
-        self.label_dock.raise_()
+      # if len(self.labelFile.flags) > 0:
+      #   flags.update(self.labelFile.flags)
+      #   self.flag_dock.raise_()
+      # else:
+      #   self.label_dock.raise_()
 
-    self.loadFlags(flags)
+    #self.loadFlags(flags)
     if self._config["keep_prev"] and self.noAnnotations():
       self.loadAnnotations(prev_annotations, replace=False)
       self.setDirty()
@@ -1792,17 +1777,21 @@ class MainWindow(QtWidgets.QMainWindow):
     else:
       self.setClean()
 
-    # set brightness constrast values
-    brightness = self.appearance_widget.slider_brightness.value() / 50;
-    contrast = self.appearance_widget.slider_contrast.value() / 50
-    self.onAppearanceChangedCallback(brightness=brightness, contrast=contrast)
+    # # set brightness constrast values
+    # brightness = self.appearance_widget.slider_brightness.value() / 50;
+    # contrast = self.appearance_widget.slider_contrast.value() / 50
+    #self.onAppearanceChangedCallback()
+    img = utils.img_data_to_pil(self.imageData)
+    img_data = utils.img_pil_to_data(img)
+    qimage = QtGui.QImage.fromData(img_data)
+    self.canvas.loadPixmap(QtGui.QPixmap.fromImage(qimage))
     self.canvas.setEnabled(True)
 
-    if len(self.canvas.annotations) > 0:
-      self.menus.export_.setEnabled(True)
+    # if len(self.canvas.annotations) > 0:
+    #   self.menus.export_.setEnabled(True)
 
-    self.appearance_widget.setAnnotations(self.canvas.annotations)
-    self.appearance_widget.setEnabled(True)
+    # self.appearance_widget.setAnnotations(self.canvas.annotations)
+    # self.appearance_widget.setEnabled(True)
 
     # set zoom values
     is_initial_load = not self.zoom_values
@@ -1823,22 +1812,22 @@ class MainWindow(QtWidgets.QMainWindow):
     self.toggleActions(True)
     self.status(self.tr("Loaded %s") % osp.basename(str(filename)))
 
-    # auto-run evaluation
-    if self.actions.evalAuto.isChecked():
-      self.onEvalAI()
+    # # auto-run evaluation
+    # if self.actions.evalAuto.isChecked():
+    #   self.onEvalAI()
 
-    # set annotator widget
-    if len(self.imageList) > 0:
-      worker_file = osp.join(self.lastOpenDir, "worker.json")
-    else:
-      worker_file = osp.join(osp.dirname(self.filename), "worker.json")
-    if self.workerFile != worker_file:
-      if osp.exists(worker_file):
-        self.workerFile = worker_file
-        self.annotatorInfosWidget.loadJson(worker_file)
-      else:
-        self.workerFile = None
-        self.annotatorInfosWidget.clear()
+    # # set annotator widget
+    # if len(self.imageList) > 0:
+    #   worker_file = osp.join(self.lastOpenDir, "worker.json")
+    # else:
+    #   worker_file = osp.join(osp.dirname(self.filename), "worker.json")
+    # if self.workerFile != worker_file:
+    #   if osp.exists(worker_file):
+    #     self.workerFile = worker_file
+    #     self.annotatorInfosWidget.loadJson(worker_file)
+    #   else:
+    #     self.workerFile = None
+    #     self.annotatorInfosWidget.clear()
         
     return True
 
@@ -2157,429 +2146,429 @@ class MainWindow(QtWidgets.QMainWindow):
     if not answer == mb.Yes:      return
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + MainWindow.RESET_CONFIG)
 
-  @Slot()
-  def onExportPixelMap(self):
-    if not self.output_dir:   self.onChangeOutputDir()
-    if not self.output_dir:   return False
+  # @Slot()
+  # def onExportPixelMap(self):
+  #   if not self.output_dir:   self.onChangeOutputDir()
+  #   if not self.output_dir:   return False
 
-    imageList = [self.imagePath]
-    if len(self.imageList) > 0:
-      mb = QtWidgets.QMessageBox
-      msg = self.tr('File List exists. Do you want to export all files?')
-      answer = mb.question(
-        self,
-        self.tr("Export all files"),
-        msg,
-        mb.Ok | mb.Cancel,
-        mb.Ok,
-      )
-      if answer == mb.Ok:        imageList = self.imageList
-    imageList_without_path = [osp.basename(image) for image in imageList]
+  #   imageList = [self.imagePath]
+  #   if len(self.imageList) > 0:
+  #     mb = QtWidgets.QMessageBox
+  #     msg = self.tr('File List exists. Do you want to export all files?')
+  #     answer = mb.question(
+  #       self,
+  #       self.tr("Export all files"),
+  #       msg,
+  #       mb.Ok | mb.Cancel,
+  #       mb.Ok,
+  #     )
+  #     if answer == mb.Ok:        imageList = self.imageList
+  #   imageList_without_path = [osp.basename(image) for image in imageList]
     
     
-    AnnotationType = ""
-    annotations = self.getAllAnnotations(imageList)
-    # bbox detection
-    if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
-      return False
+  #   AnnotationType = ""
+  #   annotations = self.getAllAnnotations(imageList)
+  #   # bbox detection
+  #   if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+  #     return False
     
-    print("Creating pixel map:", self.output_dir)
-    classes = {"__ignore__":-1, "_background_":0, }
-    for annotation in annotations:
-      class_name = annotation["label"]
-      if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
-        classes[class_name] = len(classes)-1
+  #   print("Creating pixel map:", self.output_dir)
+  #   classes = {"__ignore__":-1, "_background_":0, }
+  #   for annotation in annotations:
+  #     class_name = annotation["label"]
+  #     if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
+  #       classes[class_name] = len(classes)-1
 
-    class_names = list(classes.keys())
-    del class_names[0]
+  #   class_names = list(classes.keys())
+  #   del class_names[0]
 
-    if osp.isdir(osp.join(self.output_dir, "PixelMap")):
-      shutil.rmtree(osp.join(self.output_dir, "PixelMap"))
+  #   if osp.isdir(osp.join(self.output_dir, "PixelMap")):
+  #     shutil.rmtree(osp.join(self.output_dir, "PixelMap"))
     
-    os.makedirs(osp.join(self.output_dir, "PixelMap"))
+  #   os.makedirs(osp.join(self.output_dir, "PixelMap"))
     
-    colormap = imgviz.label_colormap()
-    label_colordict = {label: dict(id=colormap[id].tolist()) for label, id in classes.items() if id>0}
-    data = dict(
-      version=__version__ ,
-      images=imageList_without_path,
-      labels=label_colordict,
-    )
-    try:
-      filename = osp.join(self.output_dir, "PixelMap", "labels.json")
-      with open(filename, "w") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-      raise print(e)
+  #   colormap = imgviz.label_colormap()
+  #   label_colordict = {label: dict(id=colormap[id].tolist()) for label, id in classes.items() if id>0}
+  #   data = dict(
+  #     version=__version__ ,
+  #     images=imageList_without_path,
+  #     labels=label_colordict,
+  #   )
+  #   try:
+  #     filename = osp.join(self.output_dir, "PixelMap", "labels.json")
+  #     with open(filename, "w") as f:
+  #       json.dump(data, f, ensure_ascii=False, indent=2)
+  #   except Exception as e:
+  #     raise print(e)
 
-    for imagename in imageList:
-      base = osp.splitext(osp.basename(imagename))[0]
-      out_img_file = osp.join(self.output_dir, "PixelMap", base + ".png")
+  #   for imagename in imageList:
+  #     base = osp.splitext(osp.basename(imagename))[0]
+  #     out_img_file = osp.join(self.output_dir, "PixelMap", base + ".png")
 
-      label_file = self.getLabelFile(imagename)
-      labelFile = LabelFile(label_file)
-      if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+  #     label_file = self.getLabelFile(imagename)
+  #     labelFile = LabelFile(label_file)
+  #     if labelFile.imageData is None:
+  #       labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
 
-      img = utils.img_data_to_arr(labelFile.imageData)
-      cls, ins = utils.annotations_to_label(
-        img_shape=img.shape,
-        annotations=labelFile.annotations,
-        classes=classes,
-      )
-      ins[cls == -1] = 0  # ignore it.
+  #     img = utils.img_data_to_arr(labelFile.imageData)
+  #     cls, ins = utils.annotations_to_label(
+  #       img_shape=img.shape,
+  #       annotations=labelFile.annotations,
+  #       classes=classes,
+  #     )
+  #     ins[cls == -1] = 0  # ignore it.
 
-      # class label
-      utils.lblsave(out_img_file, cls)
+  #     # class label
+  #     utils.lblsave(out_img_file, cls)
 
-  def exportDetectionVOC(self, imageList, classes):
-    os.makedirs(osp.join(self.output_dir, "VOC"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "JPEGImages"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "Annotations"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "AnnotationsVisualization"))
+  # def exportDetectionVOC(self, imageList, classes):
+  #   os.makedirs(osp.join(self.output_dir, "VOC"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "JPEGImages"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "Annotations"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "AnnotationsVisualization"))
 
-    for imagename in imageList:
-      base = osp.splitext(osp.basename(imagename))[0]
-      out_img_file = osp.join(self.output_dir, "VOC", "JPEGImages", base + ".jpg")
-      out_xml_file = osp.join(self.output_dir, "VOC", "Annotations", base + ".xml")
-      out_viz_file = osp.join(self.output_dir, "VOC", "AnnotationsVisualization", base + ".jpg")
+  #   for imagename in imageList:
+  #     base = osp.splitext(osp.basename(imagename))[0]
+  #     out_img_file = osp.join(self.output_dir, "VOC", "JPEGImages", base + ".jpg")
+  #     out_xml_file = osp.join(self.output_dir, "VOC", "Annotations", base + ".xml")
+  #     out_viz_file = osp.join(self.output_dir, "VOC", "AnnotationsVisualization", base + ".jpg")
 
-      label_file = self.getLabelFile(imagename)
-      labelFile = LabelFile(label_file)
-      if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+  #     label_file = self.getLabelFile(imagename)
+  #     labelFile = LabelFile(label_file)
+  #     if labelFile.imageData is None:
+  #       labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
 
-      img = utils.img_data_to_arr(labelFile.imageData)
-      imgviz.io.imsave(out_img_file, img)
+  #     img = utils.img_data_to_arr(labelFile.imageData)
+  #     imgviz.io.imsave(out_img_file, img)
 
-      maker = lxml.builder.ElementMaker()
-      xml = maker.annotation(
-        maker.folder(),
-        maker.filename(base + ".jpg"),
-        maker.database(),  # e.g., The VOC2007 Database
-        maker.annotation(),  # e.g., Pascal VOC2007
-        maker.image(),  # e.g., flickr
-        maker.size(
-          maker.height(str(img.shape[0])),
-          maker.width(str(img.shape[1])),
-          maker.depth(str(img.shape[2])),
-        ),
-        maker.segmented(),
-      )
+  #     maker = lxml.builder.ElementMaker()
+  #     xml = maker.annotation(
+  #       maker.folder(),
+  #       maker.filename(base + ".jpg"),
+  #       maker.database(),  # e.g., The VOC2007 Database
+  #       maker.annotation(),  # e.g., Pascal VOC2007
+  #       maker.image(),  # e.g., flickr
+  #       maker.size(
+  #         maker.height(str(img.shape[0])),
+  #         maker.width(str(img.shape[1])),
+  #         maker.depth(str(img.shape[2])),
+  #       ),
+  #       maker.segmented(),
+  #     )
 
-      bboxes = []
-      labels = []
-      captions = []
-      for annotation in labelFile.annotations:
-        class_name = annotation["label"]
-        class_id = classes[class_name]
+  #     bboxes = []
+  #     labels = []
+  #     captions = []
+  #     for annotation in labelFile.annotations:
+  #       class_name = annotation["label"]
+  #       class_id = classes[class_name]
 
-        (xmin, ymin), (xmax, ymax) = annotation["points"]
-        # swap if min is larger than max.
-        xmin, xmax = sorted([xmin, xmax])
-        ymin, ymax = sorted([ymin, ymax])
+  #       (xmin, ymin), (xmax, ymax) = annotation["points"]
+  #       # swap if min is larger than max.
+  #       xmin, xmax = sorted([xmin, xmax])
+  #       ymin, ymax = sorted([ymin, ymax])
 
-        bboxes.append([ymin, xmin, ymax, xmax])
-        labels.append(class_id)
-        captions.append(class_name)
+  #       bboxes.append([ymin, xmin, ymax, xmax])
+  #       labels.append(class_id)
+  #       captions.append(class_name)
 
-        xml.append(
-          maker.object(
-            maker.name(annotation["label"]),
-            maker.pose(),
-            maker.truncated(),
-            maker.difficult(),
-            maker.bndbox(
-              maker.xmin(str(xmin)),
-              maker.ymin(str(ymin)),
-              maker.xmax(str(xmax)),
-              maker.ymax(str(ymax)),
-            ),
-          )
-        )
+  #       xml.append(
+  #         maker.object(
+  #           maker.name(annotation["label"]),
+  #           maker.pose(),
+  #           maker.truncated(),
+  #           maker.difficult(),
+  #           maker.bndbox(
+  #             maker.xmin(str(xmin)),
+  #             maker.ymin(str(ymin)),
+  #             maker.xmax(str(xmax)),
+  #             maker.ymax(str(ymax)),
+  #           ),
+  #         )
+  #       )
 
-      viz = imgviz.instances2rgb(
-        image=img,
-        labels=labels,
-        bboxes=bboxes,
-        captions=captions,
-        font_size=15,
-      )
-      imgviz.io.imsave(out_viz_file, viz)
+  #     viz = imgviz.instances2rgb(
+  #       image=img,
+  #       labels=labels,
+  #       bboxes=bboxes,
+  #       captions=captions,
+  #       font_size=15,
+  #     )
+  #     imgviz.io.imsave(out_viz_file, viz)
 
-      with open(out_xml_file, "wb") as f:
-        f.write(lxml.etree.tostring(xml, pretty_print=True))
+  #     with open(out_xml_file, "wb") as f:
+  #       f.write(lxml.etree.tostring(xml, pretty_print=True))
 
-  def exportSegmentationVOC(self, imageList, classes):
-    os.makedirs(osp.join(self.output_dir, "VOC"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "JPEGImages"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClass"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClassPNG"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClassVisualization"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObject"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObjectPNG"))
-    os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObjectVisualization"))
+  # def exportSegmentationVOC(self, imageList, classes):
+  #   os.makedirs(osp.join(self.output_dir, "VOC"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "JPEGImages"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClass"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClassPNG"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationClassVisualization"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObject"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObjectPNG"))
+  #   os.makedirs(osp.join(self.output_dir, "VOC", "SegmentationObjectVisualization"))
 
-    class_names = list(classes.keys())
-    del class_names[0]
-    for imagename in imageList:
-      base = osp.splitext(osp.basename(imagename))[0]
-      out_img_file = osp.join(self.output_dir, "VOC", "JPEGImages", base + ".jpg")
+  #   class_names = list(classes.keys())
+  #   del class_names[0]
+  #   for imagename in imageList:
+  #     base = osp.splitext(osp.basename(imagename))[0]
+  #     out_img_file = osp.join(self.output_dir, "VOC", "JPEGImages", base + ".jpg")
 
-      out_cls_file = osp.join(self.output_dir, "VOC", "SegmentationClass", base + ".npy")
-      out_clsp_file = osp.join(self.output_dir, "VOC", "SegmentationClassPNG", base + ".png")
-      out_clsv_file = osp.join(self.output_dir, "VOC", "SegmentationClassVisualization", base + ".jpg")
+  #     out_cls_file = osp.join(self.output_dir, "VOC", "SegmentationClass", base + ".npy")
+  #     out_clsp_file = osp.join(self.output_dir, "VOC", "SegmentationClassPNG", base + ".png")
+  #     out_clsv_file = osp.join(self.output_dir, "VOC", "SegmentationClassVisualization", base + ".jpg")
 
-      out_ins_file = osp.join(self.output_dir, "VOC", "SegmentationObject", base + ".npy")
-      out_insp_file = osp.join(self.output_dir, "VOC", "SegmentationObjectPNG", base + ".png")
-      out_insv_file = osp.join(self.output_dir, "VOC", "SegmentationObjectVisualization", base + ".jpg")
+  #     out_ins_file = osp.join(self.output_dir, "VOC", "SegmentationObject", base + ".npy")
+  #     out_insp_file = osp.join(self.output_dir, "VOC", "SegmentationObjectPNG", base + ".png")
+  #     out_insv_file = osp.join(self.output_dir, "VOC", "SegmentationObjectVisualization", base + ".jpg")
 
-      label_file = self.getLabelFile(imagename)
-      labelFile = LabelFile(label_file)
-      if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+  #     label_file = self.getLabelFile(imagename)
+  #     labelFile = LabelFile(label_file)
+  #     if labelFile.imageData is None:
+  #       labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
 
-      img = utils.img_data_to_arr(labelFile.imageData)
-      imgviz.io.imsave(out_img_file, img)
+  #     img = utils.img_data_to_arr(labelFile.imageData)
+  #     imgviz.io.imsave(out_img_file, img)
 
-      cls, ins = utils.annotations_to_label(
-        img_shape=img.shape,
-        annotations=labelFile.annotations,
-        classes=classes,
-      )
-      ins[cls == -1] = 0  # ignore it.
+  #     cls, ins = utils.annotations_to_label(
+  #       img_shape=img.shape,
+  #       annotations=labelFile.annotations,
+  #       classes=classes,
+  #     )
+  #     ins[cls == -1] = 0  # ignore it.
 
-      # class label
-      utils.lblsave(out_clsp_file, cls)
-      np.save(out_cls_file, cls)
-      clsv = imgviz.label2rgb(
-        label=cls,
-        img=imgviz.rgb2gray(img),
-        label_names=class_names,
-        font_size=15,
-        loc="rb",
-      )
-      imgviz.io.imsave(out_clsv_file, clsv)
+  #     # class label
+  #     utils.lblsave(out_clsp_file, cls)
+  #     np.save(out_cls_file, cls)
+  #     clsv = imgviz.label2rgb(
+  #       label=cls,
+  #       img=imgviz.rgb2gray(img),
+  #       label_names=class_names,
+  #       font_size=15,
+  #       loc="rb",
+  #     )
+  #     imgviz.io.imsave(out_clsv_file, clsv)
 
-      # instance label
-      utils.lblsave(out_insp_file, ins)
-      np.save(out_ins_file, ins)
-      instance_ids = np.unique(ins)
-      instance_names = [str(i) for i in range(max(instance_ids) + 1)]
-      insv = imgviz.label2rgb(
-        label=ins,
-        img=imgviz.rgb2gray(img),
-        label_names=instance_names,
-        font_size=15,
-        loc="rb",
-      )
-      imgviz.io.imsave(out_insv_file, insv)
+  #     # instance label
+  #     utils.lblsave(out_insp_file, ins)
+  #     np.save(out_ins_file, ins)
+  #     instance_ids = np.unique(ins)
+  #     instance_names = [str(i) for i in range(max(instance_ids) + 1)]
+  #     insv = imgviz.label2rgb(
+  #       label=ins,
+  #       img=imgviz.rgb2gray(img),
+  #       label_names=instance_names,
+  #       font_size=15,
+  #       loc="rb",
+  #     )
+  #     imgviz.io.imsave(out_insv_file, insv)
 
-  @Slot()
-  def onExportVOC(self):
-    if not self.output_dir:   self.onChangeOutputDir()
-    if not self.output_dir:   return False
+  # @Slot()
+  # def onExportVOC(self):
+  #   if not self.output_dir:   self.onChangeOutputDir()
+  #   if not self.output_dir:   return False
 
-    imageList = [self.imagePath]
-    if len(self.imageList) > 0:
-      mb = QtWidgets.QMessageBox
-      msg = self.tr('File List exists. Do you want to export all files?')
-      answer = mb.question(
-        self,
-        self.tr("Export all files"),
-        msg,
-        mb.Ok | mb.Cancel,
-        mb.Ok,
-      )
-      if answer == mb.Ok:        imageList = self.imageList
+  #   imageList = [self.imagePath]
+  #   if len(self.imageList) > 0:
+  #     mb = QtWidgets.QMessageBox
+  #     msg = self.tr('File List exists. Do you want to export all files?')
+  #     answer = mb.question(
+  #       self,
+  #       self.tr("Export all files"),
+  #       msg,
+  #       mb.Ok | mb.Cancel,
+  #       mb.Ok,
+  #     )
+  #     if answer == mb.Ok:        imageList = self.imageList
     
-    AnnotationType = ""
-    annotations = self.getAllAnnotations(imageList)
-    # bbox detection
-    if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
-      AnnotationType = "bbox_detection"
-    # segmentation
-    elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
-      AnnotationType = "segmenation"
+  #   AnnotationType = ""
+  #   annotations = self.getAllAnnotations(imageList)
+  #   # bbox detection
+  #   if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+  #     AnnotationType = "bbox_detection"
+  #   # segmentation
+  #   elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
+  #     AnnotationType = "segmenation"
 
-    print("Creating dataset VOC:", self.output_dir)
-    classes = {"__ignore__":-1, "_background_":0, }
-    for annotation in annotations:
-      class_name = annotation["label"]
-      if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
-        classes[class_name] = len(classes)-1
+  #   print("Creating dataset VOC:", self.output_dir)
+  #   classes = {"__ignore__":-1, "_background_":0, }
+  #   for annotation in annotations:
+  #     class_name = annotation["label"]
+  #     if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
+  #       classes[class_name] = len(classes)-1
 
-    if osp.isdir(osp.join(self.output_dir, "VOC")):
-      shutil.rmtree(osp.join(self.output_dir, "VOC"))
+  #   if osp.isdir(osp.join(self.output_dir, "VOC")):
+  #     shutil.rmtree(osp.join(self.output_dir, "VOC"))
 
-    if AnnotationType == "bbox_detection":
-      self.exportDetectionVOC(imageList, classes)
-    elif AnnotationType == "segmenation":
-      self.exportSegmentationVOC(imageList, classes)
+  #   if AnnotationType == "bbox_detection":
+  #     self.exportDetectionVOC(imageList, classes)
+  #   elif AnnotationType == "segmenation":
+  #     self.exportSegmentationVOC(imageList, classes)
 
-  @Slot()
-  def onExportCOCO(self):
-    if not self.output_dir:   self.onChangeOutputDir()
-    if not self.output_dir:   return False
+  # @Slot()
+  # def onExportCOCO(self):
+  #   if not self.output_dir:   self.onChangeOutputDir()
+  #   if not self.output_dir:   return False
 
-    imageList = [self.imagePath]
-    if len(self.imageList) > 0:
-      mb = QtWidgets.QMessageBox
-      msg = self.tr('File List exists. Do you want to export all files?')
-      answer = mb.question(
-        self,
-        self.tr("Export all files"),
-        msg,
-        mb.Ok | mb.Cancel,
-        mb.Ok,
-      )
-      if answer == mb.Ok:        imageList = self.imageList
+  #   imageList = [self.imagePath]
+  #   if len(self.imageList) > 0:
+  #     mb = QtWidgets.QMessageBox
+  #     msg = self.tr('File List exists. Do you want to export all files?')
+  #     answer = mb.question(
+  #       self,
+  #       self.tr("Export all files"),
+  #       msg,
+  #       mb.Ok | mb.Cancel,
+  #       mb.Ok,
+  #     )
+  #     if answer == mb.Ok:        imageList = self.imageList
 
-    annotations = self.getAllAnnotations(imageList)
-    # bbox detection
-    if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
-      return False
+  #   annotations = self.getAllAnnotations(imageList)
+  #   # bbox detection
+  #   if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+  #     return False
 
-    print("Creating dataset COCO:", self.output_dir)
-    classes = {"__ignore__":-1, "_background_":0, }
-    for annotation in annotations:
-      class_name = annotation["label"]
-      if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
-        classes[class_name] = len(classes)-1
+  #   print("Creating dataset COCO:", self.output_dir)
+  #   classes = {"__ignore__":-1, "_background_":0, }
+  #   for annotation in annotations:
+  #     class_name = annotation["label"]
+  #     if class_name not in list(classes.keys()) + ["__ignore__", "_background_"]:
+  #       classes[class_name] = len(classes)-1
 
-    class_names = list(classes.keys())
-    del class_names[0]
+  #   class_names = list(classes.keys())
+  #   del class_names[0]
 
-    if osp.isdir(osp.join(self.output_dir, "COCO")):
-      shutil.rmtree(osp.join(self.output_dir, "COCO"))
+  #   if osp.isdir(osp.join(self.output_dir, "COCO")):
+  #     shutil.rmtree(osp.join(self.output_dir, "COCO"))
     
-    os.makedirs(osp.join(self.output_dir, "COCO"))
-    os.makedirs(osp.join(self.output_dir, "COCO", "JPEGImages"))
-    os.makedirs(osp.join(self.output_dir, "COCO", "Visualization"))
+  #   os.makedirs(osp.join(self.output_dir, "COCO"))
+  #   os.makedirs(osp.join(self.output_dir, "COCO", "JPEGImages"))
+  #   os.makedirs(osp.join(self.output_dir, "COCO", "Visualization"))
     
-    now = datetime.datetime.now()
-    data = dict(
-      info=dict(
-        description=None,
-        url=None,
-        version=None,
-        year=now.year,
-        contributor=None,
-        date_created=now.strftime("%Y/%m/%d"),
-      ),
-      licenses=[dict(url=None, id=0, name=None,)],
-      images=[
-        # license, url, file_name, height, width, date_captured, id
-      ],
-      type="instances",
-      annotations=[
-        # segmentation, area, iscrowd, image_id, bbox, category_id, id
-      ],
-      categories=[
-        # supercategory, id, name
-      ],
-    )
+  #   now = datetime.datetime.now()
+  #   data = dict(
+  #     info=dict(
+  #       description=None,
+  #       url=None,
+  #       version=None,
+  #       year=now.year,
+  #       contributor=None,
+  #       date_created=now.strftime("%Y/%m/%d"),
+  #     ),
+  #     licenses=[dict(url=None, id=0, name=None,)],
+  #     images=[
+  #       # license, url, file_name, height, width, date_captured, id
+  #     ],
+  #     type="instances",
+  #     annotations=[
+  #       # segmentation, area, iscrowd, image_id, bbox, category_id, id
+  #     ],
+  #     categories=[
+  #       # supercategory, id, name
+  #     ],
+  #   )
 
-    out_ann_file = osp.join(self.output_dir, "COCO", "annotations.json")
-    for image_id, imagename in enumerate(imageList):
-      base = osp.splitext(osp.basename(imagename))[0]
-      out_img_file = osp.join(self.output_dir, "COCO", "JPEGImages", base + ".jpg")
-      out_viz_file = osp.join(self.output_dir, "COCO", "Visualization", base + ".jpg")
+  #   out_ann_file = osp.join(self.output_dir, "COCO", "annotations.json")
+  #   for image_id, imagename in enumerate(imageList):
+  #     base = osp.splitext(osp.basename(imagename))[0]
+  #     out_img_file = osp.join(self.output_dir, "COCO", "JPEGImages", base + ".jpg")
+  #     out_viz_file = osp.join(self.output_dir, "COCO", "Visualization", base + ".jpg")
 
-      label_file = self.getLabelFile(imagename)
-      labelFile = LabelFile(label_file)
-      if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+  #     label_file = self.getLabelFile(imagename)
+  #     labelFile = LabelFile(label_file)
+  #     if labelFile.imageData is None:
+  #       labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
 
-      img = utils.img_data_to_arr(labelFile.imageData)
-      imgviz.io.imsave(out_img_file, img)
+  #     img = utils.img_data_to_arr(labelFile.imageData)
+  #     imgviz.io.imsave(out_img_file, img)
 
-      data["images"].append(
-        dict(
-          license=0,
-          url=None,
-          file_name=osp.relpath(out_img_file, osp.dirname(out_ann_file)),
-          height=img.shape[0],
-          width=img.shape[1],
-          date_captured=None,
-          id=image_id,
-        )
-      )
+  #     data["images"].append(
+  #       dict(
+  #         license=0,
+  #         url=None,
+  #         file_name=osp.relpath(out_img_file, osp.dirname(out_ann_file)),
+  #         height=img.shape[0],
+  #         width=img.shape[1],
+  #         date_captured=None,
+  #         id=image_id,
+  #       )
+  #     )
 
-      masks = {}  # for area
-      segmentations = collections.defaultdict(list)  # for segmentation
-      for annotation in labelFile.annotations:
-        points = annotation["points"]
-        label = annotation["label"]
-        group_id = annotation.get("group_id")
-        shape_type = annotation.get("shape_type", "polygon")
-        mask = utils.shape_to_mask(
-          img.shape[:2], points, shape_type
-        )
+  #     masks = {}  # for area
+  #     segmentations = collections.defaultdict(list)  # for segmentation
+  #     for annotation in labelFile.annotations:
+  #       points = annotation["points"]
+  #       label = annotation["label"]
+  #       group_id = annotation.get("group_id")
+  #       shape_type = annotation.get("shape_type", "polygon")
+  #       mask = utils.shape_to_mask(
+  #         img.shape[:2], points, shape_type
+  #       )
 
-        if group_id is None:
-          group_id = uuid.uuid1()
+  #       if group_id is None:
+  #         group_id = uuid.uuid1()
 
-        instance = (label, group_id)
+  #       instance = (label, group_id)
 
-        if instance in masks:
-          masks[instance] = masks[instance] | mask
-        else:
-          masks[instance] = mask
+  #       if instance in masks:
+  #         masks[instance] = masks[instance] | mask
+  #       else:
+  #         masks[instance] = mask
 
-        if shape_type == "rectangle":
-          (x1, y1), (x2, y2) = points
-          x1, x2 = sorted([x1, x2])
-          y1, y2 = sorted([y1, y2])
-          points = [x1, y1, x2, y1, x2, y2, x1, y2]
-        else:
-          points = np.asarray(points).flatten().tolist()
+  #       if shape_type == "rectangle":
+  #         (x1, y1), (x2, y2) = points
+  #         x1, x2 = sorted([x1, x2])
+  #         y1, y2 = sorted([y1, y2])
+  #         points = [x1, y1, x2, y1, x2, y2, x1, y2]
+  #       else:
+  #         points = np.asarray(points).flatten().tolist()
 
-        segmentations[instance].append(points)
-      segmentations = dict(segmentations)
+  #       segmentations[instance].append(points)
+  #     segmentations = dict(segmentations)
 
-      for instance, mask in masks.items():
-        class_name, group_id = instance
-        if class_name not in class_names:
-          continue
-        class_id = classes[class_name]
+  #     for instance, mask in masks.items():
+  #       class_name, group_id = instance
+  #       if class_name not in class_names:
+  #         continue
+  #       class_id = classes[class_name]
 
-        mask = np.asfortranarray(mask.astype(np.uint8))
-        mask = cocomask.encode(mask)
-        area = float(cocomask.area(mask))
-        bbox = cocomask.toBbox(mask).flatten().tolist()
+  #       mask = np.asfortranarray(mask.astype(np.uint8))
+  #       mask = cocomask.encode(mask)
+  #       area = float(cocomask.area(mask))
+  #       bbox = cocomask.toBbox(mask).flatten().tolist()
 
-        data["annotations"].append(
-          dict(
-            id=len(data["annotations"]),
-            image_id=image_id,
-            category_id=class_id,
-            segmentation=segmentations[instance],
-            area=area,
-            bbox=bbox,
-            iscrowd=0,
-          )
-        )
+  #       data["annotations"].append(
+  #         dict(
+  #           id=len(data["annotations"]),
+  #           image_id=image_id,
+  #           category_id=class_id,
+  #           segmentation=segmentations[instance],
+  #           area=area,
+  #           bbox=bbox,
+  #           iscrowd=0,
+  #         )
+  #       )
 
-      labels, captions, masks = zip(
-        *[
-          (classes[cnm], cnm, msk)
-          for (cnm, gid), msk in masks.items()
-          if cnm in class_names
-        ]
-      )
-      viz = imgviz.instances2rgb(
-        image=img,
-        labels=labels,
-        masks=masks,
-        captions=captions,
-        font_size=15,
-        line_width=2,
-      )
-      imgviz.io.imsave(out_viz_file, viz)
+  #     labels, captions, masks = zip(
+  #       *[
+  #         (classes[cnm], cnm, msk)
+  #         for (cnm, gid), msk in masks.items()
+  #         if cnm in class_names
+  #       ]
+  #     )
+  #     viz = imgviz.instances2rgb(
+  #       image=img,
+  #       labels=labels,
+  #       masks=masks,
+  #       captions=captions,
+  #       font_size=15,
+  #       line_width=2,
+  #     )
+  #     imgviz.io.imsave(out_viz_file, viz)
 
-      with open(out_ann_file, "w") as f:
-        json.dump(data, f)
+  #     with open(out_ann_file, "w") as f:
+  #       json.dump(data, f)
   
   # [temperally-code] load GT images
   @property
@@ -2590,60 +2579,60 @@ class MainWindow(QtWidgets.QMainWindow):
       list.append(osp.join(self.lastOpenDir, "../GT", item.text()))
     return list
 
-  def onEvalAI(self):
-    if not self.actions.evalAuto.isChecked():
-      self.appearance_widget.setEnabledEval(False)
-      self.canvas.groundtruth = []
-      self.canvas.repaint()
-      return
+  # def onEvalAI(self):
+  #   if not self.actions.evalAuto.isChecked():
+  #     self.appearance_widget.setEnabledEval(False)
+  #     self.canvas.groundtruth = []
+  #     self.canvas.repaint()
+  #     return
     
-    if len(self.imageList) > 0:
-      label_file = osp.join(self.lastOpenDir, "../GT", self.getLabelFile(osp.basename(self.filename)))
-    else:
-      label_file = osp.join(osp.dirname(self.filename), "../GT", self.getLabelFile(osp.basename(self.filename)))
+  #   if len(self.imageList) > 0:
+  #     label_file = osp.join(self.lastOpenDir, "../GT", self.getLabelFile(osp.basename(self.filename)))
+  #   else:
+  #     label_file = osp.join(osp.dirname(self.filename), "../GT", self.getLabelFile(osp.basename(self.filename)))
 
-    if not osp.exists(label_file):
-      return
+  #   if not osp.exists(label_file):
+  #     return
     
-    labelFile = LabelFile(label_file)
-    self.canvas.groundtruth = [utils.dict_to_annotation(annotation, self._config["label_flags"]) for annotation in labelFile.annotations]
-    for gt in self.canvas.groundtruth:
-      if not self.labelList.findItemsByLabel(gt.label):
-        label_item = self.labelList.createItemFromLabel(gt.label)
-        self.labelList.addItem(label_item)
-        rgb = self._get_rgb_by_label(gt.label)
-        self.labelList.setItemLabel(label_item, gt.label, rgb)
+  #   labelFile = LabelFile(label_file)
+  #   self.canvas.groundtruth = [utils.dict_to_annotation(annotation, self._config["label_flags"]) for annotation in labelFile.annotations]
+  #   for gt in self.canvas.groundtruth:
+  #     if not self.labelList.findItemsByLabel(gt.label):
+  #       label_item = self.labelList.createItemFromLabel(gt.label)
+  #       self.labelList.addItem(label_item)
+  #       rgb = self._get_rgb_by_label(gt.label)
+  #       self.labelList.setItemLabel(label_item, gt.label, rgb)
 
-      rgb = self._get_rgb_by_label(gt.label)
-      gt.setColor(rgb)
+  #     rgb = self._get_rgb_by_label(gt.label)
+  #     gt.setColor(rgb)
 
-    self.appearance_widget.setEnabledEval(True)
-    self.canvas.repaint()
+  #   self.appearance_widget.setEnabledEval(True)
+  #   self.canvas.repaint()
 
-  def onEnableOpenNextImageAfterEval(self, enabled):
-    self._config["auto_open_next_eval"] = enabled
+  # def onEnableOpenNextImageAfterEval(self, enabled):
+  #   self._config["auto_open_next_eval"] = enabled
 
-  def onEvalJudgement(self, pass_):
-    if not self.workerFile: return
-    data = json.load(open(self.workerFile))
-    work = data["work"]
-    if pass_:
-      imname = osp.basename(self.filename)
-      if not imname in work["pass_images"]:
-        work["pass_images"].append(imname)
-        work["passed_num_images"] = len(work["pass_images"])
-    else:
-      imname = osp.basename(self.filename)
-      if imname in work["pass_images"]:
-        work["pass_images"].remove(imname)
-        work["passed_num_images"] = len(work["pass_images"])
+  # def onEvalJudgement(self, pass_):
+  #   if not self.workerFile: return
+  #   data = json.load(open(self.workerFile))
+  #   work = data["work"]
+  #   if pass_:
+  #     imname = osp.basename(self.filename)
+  #     if not imname in work["pass_images"]:
+  #       work["pass_images"].append(imname)
+  #       work["passed_num_images"] = len(work["pass_images"])
+  #   else:
+  #     imname = osp.basename(self.filename)
+  #     if imname in work["pass_images"]:
+  #       work["pass_images"].remove(imname)
+  #       work["passed_num_images"] = len(work["pass_images"])
 
-    with open(self.workerFile, "w") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    self.annotatorInfosWidget.loadJson(self.workerFile)
+  #   with open(self.workerFile, "w") as f:
+  #       json.dump(data, f, ensure_ascii=False, indent=2)
+  #   self.annotatorInfosWidget.loadJson(self.workerFile)
 
-    if self.actions.openNextImageAfterEval.isChecked():
-      self.openNextImg()
+  #   if self.actions.openNextImageAfterEval.isChecked():
+  #     self.openNextImg()
 
   # Message Dialogs. #
   def hasLabels(self):
