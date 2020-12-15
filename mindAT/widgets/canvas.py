@@ -36,7 +36,7 @@ class Canvas(QtWidgets.QWidget):
   edgeSelected = QtCore.Signal(bool, object)
   vertexSelected = QtCore.Signal(bool)
 
-  CREATE, EDIT = 0, 1
+  CREATE, EDIT, MOVE = 0, 1, 2
 
   # polygon, rectangle, line, or point
   _createMode = "polygon"
@@ -167,12 +167,19 @@ class Canvas(QtWidgets.QWidget):
   def editing(self):
     return self.mode == self.EDIT
 
+  def moving(self):
+    return self.mode == self.MOVE
+
   def setEditing(self, value=True):
     self.mode = self.EDIT if value else self.CREATE
     self.cancelDrawing()
     if not value:  # Create
       self.unHighlight()
       self.deSelectAnnotation()
+  
+  def setMoving(self, value=True):
+    self.mode = self.MOVE if value else self.EDIT
+    self.cancelDrawing()
 
   def unHighlight(self):
     if self.hAnnotation:
@@ -259,7 +266,7 @@ class Canvas(QtWidgets.QWidget):
         self.boundedMoveVertex(pos)
         self.repaint()
         self.movingAnnotation = True
-      elif self.selectedAnnotations and self.prevPoint:
+      elif self.moving() and self.selectedAnnotations and self.prevPoint:
         self.overrideCursor(CURSOR_MOVE)
         self.boundedMoveAnnotations(self.selectedAnnotations, pos)
         self.repaint()
@@ -288,7 +295,7 @@ class Canvas(QtWidgets.QWidget):
         self.setStatusTip(self.toolTip())
         self.update()
         break
-      elif annotation.containsPoint(pos):
+      elif self.moving() and annotation.containsPoint(pos):
         if self.selectedVertex():
           self.hAnnotation.highlightClear()
         self.prevhVertex = self.hVertex
@@ -794,7 +801,7 @@ class Canvas(QtWidgets.QWidget):
     self.drawingPolygon.emit(False)
     self.update()
 
-  def cancelCreate(self):
+  def cancelAction(self):
     if self.activeAction and self.activeAction.isChecked():
       self.activeAction.setChecked(False);
       self.setEditing(True)
@@ -802,12 +809,13 @@ class Canvas(QtWidgets.QWidget):
 
   def keyPressEvent(self, event):
     key = event.key()
-    if key == QtCore.Qt.Key_Escape and self.current:
-      self.cancelDrawing()
+    if key == QtCore.Qt.Key_Escape:
+      if self.current:
+        self.cancelDrawing()
+      else:
+        self.cancelAction();
     elif key == QtCore.Qt.Key_Return and self.canCloseAnnotation():
       self.finalise()
-    else:
-      self.cancelCreate();
 
   def setLastLabel(self, text, flags):
     assert text

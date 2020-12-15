@@ -79,22 +79,22 @@
     <message>
         <location filename="../app.py" line="143"/>
         <source>Label List</source>
-        <translation>레이블 목록</translation>
+        <translation>라벨 목록</translation>
     </message>
     <message>
         <location filename="../app.py" line="204"/>
         <source>Annotator</source>
-        <translation>주석 작업자</translation>
+        <translation>어노테이션 작업자</translation>
     </message>
     <message>
         <location filename="../app.py" line="124"/>
         <source>Labels</source>
-        <translation>레이블</translation>
+        <translation>라벨 리스트</translation>
     </message>
     <message>
         <location filename="../app.py" line="124"/>
         <source>Annotations</source>
-        <translation>주석</translation>
+        <translation>어노테이션 리스트</translation>
     </message>
     <message>
         <location filename="../app.py" line="127"/>
