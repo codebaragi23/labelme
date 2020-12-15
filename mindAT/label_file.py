@@ -227,10 +227,10 @@ class LabelFile(object):
         imageData = base64.b64decode(data["imageData"])
         if PY2 and QT4:
           imageData = utils.img_data_to_png_data(imageData)
-      # elif data["imagePath"] is not None:
-      #   # relative path from label file to relative path from cwd
-      #   imagePath = osp.join(osp.dirname(filename), data["imagePath"])
-      #   imageData = self.load_image_file(imagePath)
+      elif data["imagePath"] is not None:
+        # relative path from label file to relative path from cwd
+        imagePath = osp.join(osp.dirname(filename), data["imagePath"])
+        imageData = self.load_image_file(imagePath)
       else:
         imageData = None
 
