@@ -8,11 +8,16 @@ import cv2
 import PIL.Image
 import tifffile
 
+import affine
+import copy
+
 from mindAT import __version__
 from mindAT.logger import logger
 from mindAT import PY2
 from mindAT import QT4
 from mindAT import utils
+
+import geopandas
 
 PIL.Image.MAX_IMAGE_PIXELS = None
 
@@ -38,7 +43,7 @@ def LabelFileFromGeo(geo, geo_transfrom, config=None):
   return labelFile
 
 class LabelFile(object):
-  suffix = ".json"
+  suffix = ".geojson"
 
   def __init__(self, filename=None):
     self.annotations = []
@@ -102,38 +107,8 @@ class LabelFile(object):
       "geometry",
     ]
 
-    # relative path from label file to relative path from cwd
-    # annotations = [
-    #   dict(
-    #     # label=feature["properties"]["작물ID"],
-    #     # shape_type=feature["geometry"]["type"].lower(),
-    #     # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-
-    #     # t1
-    #     # label=str(feature["properties"]["속성"]),
-    #     # shape_type=feature["geometry"]["type"].lower(),
-    #     # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-
-    #     # t2
-    #     # label=str(feature["properties"]["ann_name"]),
-    #     # shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
-    #     # #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-    #     # points=[[x, y] for x, y in feature["geometry"]["coordinates"][0]],
-
-    #     # t3
-    #     label=str(feature["properties"]["ann_name"]),
-    #     shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
-    #     points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-        
-    #     flags=feature.get("flags", {}),
-    #     group_id=feature.get("group_id", None),
-    #     other_data={
-    #       k:v for k, v in feature.items() if k not in annotation_keys
-    #     },
-    #   )
-    #   for feature in data["features"]
-    # ]
-
+    self.transform = affine.Affine.from_gdal(*geo_transfrom)
+    transform = ~self.transform
     annotations = []
     for feature in data["features"]:
       if feature["geometry"][config["shape_type"]].lower() == "multipolygon":
@@ -142,7 +117,8 @@ class LabelFile(object):
           annot = dict(
             label=str(feature["properties"][config["prop_ann_name"]]),
             shape_type="polygon",
-            points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][i][0]],
+            #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][i][0]],
+            points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][i][0]],
             
             flags=feature.get("flags", {}),
             group_id=feature.get("group_id", None),
@@ -155,7 +131,8 @@ class LabelFile(object):
         annot = dict(
           label=str(feature["properties"][config["prop_ann_name"]]),
           shape_type="polygon",
-          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
+          #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
+          points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
           
           flags=feature.get("flags", {}),
           group_id=feature.get("group_id", None),
@@ -167,7 +144,8 @@ class LabelFile(object):
         annot = dict(
           label=str(feature["properties"][config["prop_ann_name"]]),
           shape_type=feature["geometry"][config["shape_type"]].lower(),
-          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+          #points1=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
+          points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][0]],
           
           flags=feature.get("flags", {}),
           group_id=feature.get("group_id", None),
@@ -185,6 +163,7 @@ class LabelFile(object):
     self.filename = None
     self.annotations = annotations
     self.otherData = otherData
+    self.geo = data;
 
   def load(self, filename):
     keys = [
@@ -300,39 +279,55 @@ class LabelFile(object):
     otherData=None,
     flags=None,
   ):
-    if imageData is not None:
-      imageData = base64.b64encode(imageData).decode("utf-8")
-      imageHeight, imageWidth = self._check_image_height_and_width(
-        imageData, imageHeight, imageWidth
-      )
-    if otherData is None:
-      otherData = {}
-    if flags is None:
-      flags = {}
-    
-    data = dict(
-      version=__version__,
-      flags=flags,
-      annotations=annotations,
-      imagePath=imagePath,
-      imageData=imageData,
-      imageHeight=imageHeight,
-      imageWidth=imageWidth,
-    )
-    for key, value in otherData.items():
-      assert key not in data
-      data[key] = value
-
-    # if format == 'GeoJSON':
-    #   data = dict(
-    #     type=otherData.get("type", "FeatureCollection"),
-    #     crs=otherData.get("crs", { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32652" } }),
-    #     features= [dict({"type":"Feature", "properties":{"관리번호":None, "작물ID": k["label"], "작업위치":None}, "geometry":{"type":k["shape_type"].capitalize(), "coordinates":[[[x, -y] for x, y in k["points"] ]]}}) for k in annotations]
+    # if imageData is not None:
+    #   imageData = base64.b64encode(imageData).decode("utf-8")
+    #   imageHeight, imageWidth = self._check_image_height_and_width(
+    #     imageData, imageHeight, imageWidth
     #   )
+    # if otherData is None:
+    #   otherData = {}
+    # if flags is None:
+    #   flags = {}
+    
+    # data1= dict(
+    #   version=__version__,
+    #   flags=flags,
+    #   annotations=annotations,
+    #   imagePath=imagePath,
+    #   imageData=imageData,
+    #   imageHeight=imageHeight,
+    #   imageWidth=imageWidth,
+    # )
+    # for key, value in otherData.items():
+    #   assert key not in data1
+    #   data1[key] = value
+
+    with open(filename, "r") as f:
+      data = json.load(f)
+    
+    ref = copy.deepcopy(data["features"][0])
+    del data["features"]
+    transform = self.transform
+
+    features = []
+    for annot in annotations:
+      cropsid = dict(cropsid = annot["label"])
+      geometry = dict(geometry = {"type":annot["shape_type"].capitalize(), "coordinates":[[list(transform*(x, y)) for x, y in annot["points"] ]]})
+      ref["properties"].update(cropsid)
+      ref.update(geometry)
+      features.append(copy.deepcopy(ref))
+
+
+    # points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][0]],
+    # features = dict(
+    #   features=[dict({"properties":{"cropsid": annot["label"]}, "geometry":{"type":annot["shape_type"].capitalize(), "coordinates":[[list(transform*(x, y)) for x, y in annot["points"] ]]}}) for annot in annotations]
+    # )
+
+    data["features"] = features
 
     try:
-      with open(filename, "w") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+      with open("test.geojson", "w") as f:
+        json.dump(data, f, ensure_ascii=False)
       self.filename = filename
     except Exception as e:
       raise LabelFileError(e)

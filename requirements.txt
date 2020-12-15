@@ -15,6 +15,7 @@ tifffile
 lxml
 imagecodecs
 colordict
+affine
 
 # # Geo ----------------------------------------
 geopandas

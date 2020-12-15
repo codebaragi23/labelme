@@ -306,14 +306,14 @@ class MainWindow(QtWidgets.QMainWindow):
       self.tr("Save labels to file"),
       enabled=False,
     )
-    saveAs = action(
-      self.tr("&Save As"),
-      self.saveFileAs,
-      shortcuts["save_as"],
-      "save-as",
-      self.tr("Save labels to a different file"),
-      enabled=False,
-    )
+    # saveAs = action(
+    #   self.tr("&Save As"),
+    #   self.saveFileAs,
+    #   shortcuts["save_as"],
+    #   "save-as",
+    #   self.tr("Save labels to a different file"),
+    #   enabled=False,
+    # )
 
     deleteFile = action(
       self.tr("&Delete File"),
@@ -334,13 +334,13 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     saveAuto.setChecked(self._config["auto_save"])
 
-    saveWithImageData = action(
-      text=self.tr("Save With Image Data"),
-      slot=self.enableSaveImageWithData,
-      tip=self.tr("Save image data in label file"),
-      checkable=True,
-      checked=self._config["store_data"],
-    )
+    # saveWithImageData = action(
+    #   text=self.tr("Save With Image Data"),
+    #   slot=self.enableSaveImageWithData,
+    #   tip=self.tr("Save image data in label file"),
+    #   checkable=True,
+    #   checked=self._config["store_data"],
+    # )
 
     changeOutputDir = action(
       text=self.tr("Change &Output Dir"),
@@ -675,10 +675,10 @@ class MainWindow(QtWidgets.QMainWindow):
     # Store actions for further handling.
     self.actions = utils.struct(
       saveAuto=saveAuto,
-      saveWithImageData=saveWithImageData,
+      #saveWithImageData=saveWithImageData,
       changeOutputDir=changeOutputDir,
       save=save,
-      saveAs=saveAs,
+      #saveAs=saveAs,
       open=open_,
       close=close,
       deleteFile=deleteFile,
@@ -709,7 +709,8 @@ class MainWindow(QtWidgets.QMainWindow):
       zoomActions=zoomActions,
       openNextImg=openNextImg,
       openPrevImg=openPrevImg,
-      fileMenuActions=(open_, opendir, save, saveAs, close, quit),
+      #fileMenuActions=(open_, opendir, save, saveAs, close, quit),
+      fileMenuActions=(open_, opendir, save, close, quit),
       tool=(),
       
       annotCheckableOperations=(
@@ -763,7 +764,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # createPointMode,
         # createLineStripMode,
       ),
-      onAnnotationsPresent=(saveAs, hideAll, showAll),
+      #onAnnotationsPresent=(saveAs, hideAll, showAll),
+      onAnnotationsPresent=(hideAll, showAll),
       # exportDetectMenu=(
       #   exportVOC,
       # ),
@@ -810,9 +812,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.menus.recentFiles,
         None,
         save,
-        saveAs,
+        #saveAs,
         saveAuto,
-        saveWithImageData,
+        #saveWithImageData,
         None,
         self.menus.preferences,
         None,
@@ -954,7 +956,7 @@ class MainWindow(QtWidgets.QMainWindow):
       logger.warn(
         "If `auto_save` argument is True, `output_file` argument "
         "is ignored and output filename is automatically "
-        "set as IMAGE_BASENAME.json."
+        "set as IMAGE_BASENAME.geojson."
       )
     self.output_file = output_file
     self.output_dir = output_dir
@@ -1391,7 +1393,7 @@ class MainWindow(QtWidgets.QMainWindow):
   #     self.flag_widget.addItem(item)
 
   def saveLabels(self, filename):
-    lf = LabelFile()
+    #lf = LabelFile()
 
     annotations = [utils.annotation_to_dict(item.annotation()) for item in self.annotList]
     #flags = {}
@@ -1402,20 +1404,20 @@ class MainWindow(QtWidgets.QMainWindow):
     #   flags[key] = flag
     try:
       imagePath = osp.relpath(self.imagePath, osp.dirname(filename))
-      imageData = self.imageData if self.actions.saveWithImageData.isChecked() else None
+      #imageData = self.imageData if self.actions.saveWithImageData.isChecked() else None
       if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
         os.makedirs(osp.dirname(filename))
-      lf.save(
+      self.labelFile.save(
         filename=filename,
         annotations=annotations,
         imagePath=imagePath,
-        imageData=imageData,
+        imageData=None,
         imageHeight=self.image.height(),
         imageWidth=self.image.width(),
         otherData=self.otherData,
         #flags=flags,
       )
-      self.labelFile = lf
+      #self.labelFile = lf
       items = self.fileListWidget.findItems(
         self.imagePath, Qt.MatchExactly
       )
@@ -1692,10 +1694,9 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file_without_path = osp.basename(label_file)
       label_file = osp.join(self.output_dir, label_file_without_path)
     
-    geolabel = False
     if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
-      self.labelFile, self.imagePath = self.load_labelfile(label_file)
-    elif QtCore.QFile.exists(osp.splitext(filename)[0] + ".geojson"):
+    #   self.labelFile, self.imagePath = self.load_labelfile(label_file)
+    # elif QtCore.QFile.exists(osp.splitext(filename)[0] + ".geojson"):
       geo = geopandas.read_file(osp.splitext(filename)[0] + ".geojson", encoding='cp949')
       geo = geo._to_geo(na="null", show_bbox=False)
       
@@ -1706,22 +1707,21 @@ class MainWindow(QtWidgets.QMainWindow):
       self.labelFile.filename = label_file
       self.labelFile.imagePath = filename
       self.imagePath = filename
-      geolabel = True
-    elif all(QtCore.QFile.exists(osp.splitext(filename)[0] + geo_file_ext) for geo_file_ext in [".dbf", ".shp", ".shx"]):
-      dbf_file = geopandas.read_file(osp.splitext(filename)[0] + ".shp", encoding='cp949')
-      geo = dbf_file._to_geo(na="null", show_bbox=False)
+    # elif all(QtCore.QFile.exists(osp.splitext(filename)[0] + geo_file_ext) for geo_file_ext in [".dbf", ".shp", ".shx"]):
+    #   dbf_file = geopandas.read_file(osp.splitext(filename)[0] + ".shp", encoding='cp949')
+    #   geo = dbf_file._to_geo(na="null", show_bbox=False)
 
-      #TODEBUG
-      dbf_file.to_file(label_file.replace(".json", ".geojson"), driver='GeoJSON')
+    #   #TODEBUG
+    #   dbf_file.to_file(label_file.replace(".geojson", ".geojson"), driver='GeoJSON')
       
-      g = gdal.Open(filename)
-      geo_transfrom =  g.GetGeoTransform()
-      self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
-      self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
-      self.labelFile.filename = label_file
-      self.labelFile.imagePath = filename
-      self.imagePath = filename
-      geolabel = True
+    #   g = gdal.Open(filename)
+    #   geo_transfrom =  g.GetGeoTransform()
+    #   self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
+    #   self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
+    #   self.labelFile.filename = label_file
+    #   self.labelFile.imagePath = filename
+    #   self.imagePath = filename
+    #   geolabel = True
     else:
       self.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.imagePath = filename
@@ -1772,8 +1772,6 @@ class MainWindow(QtWidgets.QMainWindow):
     if self._config["keep_prev"] and self.noAnnotations():
       self.loadAnnotations(prev_annotations, replace=False)
       self.setDirty()
-    elif geolabel:
-      self.setDirty()
     else:
       self.setClean()
 
@@ -1818,9 +1816,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # # set annotator widget
     # if len(self.imageList) > 0:
-    #   worker_file = osp.join(self.lastOpenDir, "worker.json")
+    #   worker_file = osp.join(self.lastOpenDir, "worker.geojson")
     # else:
-    #   worker_file = osp.join(osp.dirname(self.filename), "worker.json")
+    #   worker_file = osp.join(osp.dirname(self.filename), "worker.geojson")
     # if self.workerFile != worker_file:
     #   if osp.exists(worker_file):
     #     self.workerFile = worker_file
@@ -1969,9 +1967,7 @@ class MainWindow(QtWidgets.QMainWindow):
       "*.{}".format(fmt.data().decode())
       for fmt in QtGui.QImageReader.supportedImageFormats()
     ]
-    filters = self.tr("Image & Label files (%s)") % " ".join(
-      formats + ["*%s" % LabelFile.suffix]
-    )
+    filters = self.tr("Image & Label files (%s)") % " ".join(formats)
     filename = QtWidgets.QFileDialog.getOpenFileName(
       self,
       self.tr("%s - Choose Image or Label file") % __appname__,
@@ -1998,9 +1994,9 @@ class MainWindow(QtWidgets.QMainWindow):
     else:
       self._saveFile(self.saveFileDialog())
 
-  def saveFileAs(self, _value=False):
-    assert not self.image.isNull(), "cannot save empty image"
-    self._saveFile(self.saveFileDialog())
+  # def saveFileAs(self, _value=False):
+  #   assert not self.image.isNull(), "cannot save empty image"
+  #   self._saveFile(self.saveFileDialog())
 
   def saveFileDialog(self):
     caption = self.tr("%s - Choose File") % __appname__
@@ -2051,13 +2047,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.toggleActions(False)
     self.canvas.setEnabled(False)
-    self.actions.saveAs.setEnabled(False)
+    #self.actions.saveAs.setEnabled(False)
 
   def getLabelFile(self, filename):
-    if filename.lower().endswith(".json"):
+    if filename.lower().endswith(".geojson"):
       label_file = filename
     else:
-      label_file = osp.splitext(filename)[0] + ".json"
+      label_file = osp.splitext(filename)[0] + ".geojson"
     return label_file
 
   def deleteFile(self):
@@ -2195,7 +2191,7 @@ class MainWindow(QtWidgets.QMainWindow):
   #     labels=label_colordict,
   #   )
   #   try:
-  #     filename = osp.join(self.output_dir, "PixelMap", "labels.json")
+  #     filename = osp.join(self.output_dir, "PixelMap", "labels.geojson")
   #     with open(filename, "w") as f:
   #       json.dump(data, f, ensure_ascii=False, indent=2)
   #   except Exception as e:
@@ -2469,7 +2465,7 @@ class MainWindow(QtWidgets.QMainWindow):
   #     ],
   #   )
 
-  #   out_ann_file = osp.join(self.output_dir, "COCO", "annotations.json")
+  #   out_ann_file = osp.join(self.output_dir, "COCO", "annotations.geojson")
   #   for image_id, imagename in enumerate(imageList):
   #     base = osp.splitext(osp.basename(imagename))[0]
   #     out_img_file = osp.join(self.output_dir, "COCO", "JPEGImages", base + ".jpg")
