@@ -74,7 +74,7 @@ There are options:
 ### Build
 
 ```bash
-/mindAT$ docker build -t codebaragi23/mindAT -f docker/Dockerfile .
+/mindAT$ docker build -t codebaragi23/mindat -f docker/Dockerfile .
 ```
 
 #### Run application
