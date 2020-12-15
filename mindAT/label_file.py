@@ -326,7 +326,7 @@ class LabelFile(object):
     data["features"] = features
 
     try:
-      with open("test.geojson", "w") as f:
+      with open(filename, "w") as f:
         json.dump(data, f, ensure_ascii=False)
       self.filename = filename
     except Exception as e:

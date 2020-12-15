@@ -301,9 +301,20 @@ class Canvas(QtWidgets.QWidget):
         self.overrideCursor(CURSOR_GRAB)
         self.update()
         break
+      elif index_edge is not None:
+        if self.selectedVertex():
+          self.hAnnotation.highlightClear()
+        self.prevhVertex = self.hVertex
+        self.hVertex = None
+        self.prevhAnnotation = self.hAnnotation = annotation
+        self.prevhEdge = self.hEdge = index_edge
+        break
+
     else:  # Nothing found, clear highlights, reset state.
       self.unHighlight()
+
     self.edgeSelected.emit(self.hEdge is not None, self.hAnnotation)
+    print(self.hEdge is not None)
     self.vertexSelected.emit(self.hVertex is not None)
 
   def addPointToEdge(self):

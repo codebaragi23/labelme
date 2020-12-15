@@ -38,7 +38,7 @@ exe = EXE(
 )
 app = BUNDLE(
   exe,
-  name='Labelme.app',
+  name='mindAT.app',
   icon='mindAT/icons/icon.icns',
   bundle_identifier=None,
   info_plist={'NSHighResolutionCapable': 'True'},
