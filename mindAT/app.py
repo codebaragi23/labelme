@@ -238,8 +238,9 @@ class MainWindow(QtWidgets.QMainWindow):
     self.setCentralWidget(scrollArea)
 
     features = QtWidgets.QDockWidget.DockWidgetFeatures()
-    #for dock in ["file_dock", "flag_dock", "label_dock", "annot_dock"]:
     for dock in ["file_dock", "flag_dock", "label_dock", "annotator_dock"]:
+      if not hasattr(self, dock):
+        continue;
       if self._config[dock]["closable"]:
         features = features | QtWidgets.QDockWidget.DockWidgetClosable
       if self._config[dock]["floatable"]:
@@ -251,11 +252,17 @@ class MainWindow(QtWidgets.QMainWindow):
         getattr(self, dock).setVisible(False)
 
     self.setTabPosition(Qt.RightDockWidgetArea, QtWidgets.QTabWidget.North)
-    self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
-    self.tabifyDockWidget(self.file_dock, self.annotator_dock)
-    self.addDockWidget(Qt.LeftDockWidgetArea, self.appe_dock)
-    self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
-    self.tabifyDockWidget(self.label_dock, self.flag_dock)
+    
+    if hasattr(self, "file_dock"):
+      self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
+    if hasattr(self, "file_dock") and hasattr(self, "annotator_dock"):
+      self.tabifyDockWidget(self.file_dock, self.annotator_dock)
+    if hasattr(self, "appe_dock"):
+      self.addDockWidget(Qt.LeftDockWidgetArea, self.appe_dock)
+    if hasattr(self, "label_dock"):
+      self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
+    if hasattr(self, "label_dock") and hasattr(self, "flag_dock"):
+      self.tabifyDockWidget(self.label_dock, self.flag_dock)
     
     # Actions
     action = functools.partial(utils.newAction, self)
@@ -381,7 +388,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     createPolyMode = action(
       text=self.tr("Create Polygons"),
-      slot=lambda: self.toggleDrawMode(self.actions.createPolyMode),
+      slot=lambda: self.onToggleDrawMode(self.actions.createPolyMode),
       shortcut=shortcuts["create_polygon"],
       icon="polygon",
       tip=self.tr("Start drawing polygons"),
@@ -390,7 +397,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     createRectangleMode = action(
       text=self.tr("Create Rectangle"),
-      slot=lambda: self.toggleDrawMode(self.actions.createRectangleMode),
+      slot=lambda: self.onToggleDrawMode(self.actions.createRectangleMode),
       shortcut=shortcuts["create_rectangle"],
       icon="rectangle",
       tip=self.tr("Start drawing rectangles"),
@@ -399,7 +406,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     createCircleMode = action(
       text=self.tr("Create Circle"),
-      slot=lambda: self.toggleDrawMode(self.actions.createCircleMode),
+      slot=lambda: self.onToggleDrawMode(self.actions.createCircleMode),
       shortcut=shortcuts["create_circle"],
       icon="circle",
       tip=self.tr("Start drawing circles"),
@@ -408,7 +415,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     createLineMode = action(
       text=self.tr("Create Line"),
-      slot=lambda: self.toggleDrawMode(self.actions.createLineMode),
+      slot=lambda: self.onToggleDrawMode(self.actions.createLineMode),
       shortcut=shortcuts["create_line"],
       icon="line",
       tip=self.tr("Start drawing lines"),
@@ -417,7 +424,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     createPointMode = action(
       text=self.tr("Create Point"),
-      slot=lambda: self.toggleDrawMode(self.actions.createPointMode),
+      slot=lambda: self.onToggleDrawMode(self.actions.createPointMode),
       shortcut=shortcuts["create_point"],
       icon="point",
       tip=self.tr("Start drawing points"),
@@ -426,7 +433,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     createLineStripMode = action(
       text=self.tr("Create LineStrip"),
-      slot=lambda: self.toggleDrawMode(self.actions.createLineStripMode),
+      slot=lambda: self.onToggleDrawMode(self.actions.createLineStripMode),
       shortcut=shortcuts["create_linestrip"],
       icon="line_strip",
       tip=self.tr("Start drawing linestrip (Ctrl+LeftClick ends creation)"),
@@ -434,6 +441,16 @@ class MainWindow(QtWidgets.QMainWindow):
       checkable=True,
     )
 
+    movableMode = action(
+      text=self.tr("Move"),
+      slot=self.onToggleMoveMode,
+      shortcut=shortcuts["move_annotation"],
+      icon="move",
+      tip=self.tr("Move the selected annotations"),
+      enabled=False,
+      checkable=True,
+    )
+    
     copy = action(
       text=self.tr("Duplicate Annotations"),
       slot=self.copySelectedAnnotation,
@@ -581,7 +598,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.MANUAL_ZOOM: lambda: 1,
     }
 
-    edit = action(
+    labelEdit = action(
       self.tr("&Edit Label"),
       self.editLabel,
       shortcuts["edit_label"],
@@ -666,7 +683,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # Lavel list context menu.
     labelMenu = QtWidgets.QMenu()
-    utils.addActions(labelMenu, (edit, delete))
+    utils.addActions(labelMenu, (labelEdit, delete))
     self.annotList.setContextMenuPolicy(Qt.CustomContextMenu)
     self.annotList.customContextMenuRequested.connect(
       self.popLabelListMenu
@@ -684,7 +701,7 @@ class MainWindow(QtWidgets.QMainWindow):
       deleteFile=deleteFile,
       toggleKeepPrevMode=toggle_keep_prev_mode,
       delete=delete,
-      edit=edit,
+      edit=labelEdit,
       copy=copy,
       undoLastPoint=undoLastPoint,
       undo=undo,
@@ -698,6 +715,8 @@ class MainWindow(QtWidgets.QMainWindow):
       createPointMode=createPointMode,
       createLineStripMode=createLineStripMode,
 
+      movableMode=movableMode,
+
       zoom=zoom,
       zoomIn=zoomIn,
       zoomOut=zoomOut,
@@ -710,7 +729,7 @@ class MainWindow(QtWidgets.QMainWindow):
       fileMenuActions=(open_, opendir, save, saveAs, close, quit),
       tool=(),
       
-      annotOperations=(
+      annotCheckableOperations=(
         createPolyMode,
         createRectangleMode,
         createCircleMode,
@@ -719,9 +738,15 @@ class MainWindow(QtWidgets.QMainWindow):
         createLineStripMode,
       ),
 
+      extraCheckableOperations = (
+        movableMode,
+      ),
+
       # XXX: need to add some actions here to activate the shortcut
       editMenu=(
-        edit,
+        None,
+        labelEdit,
+        None,
         copy,
         delete,
         None,
@@ -732,16 +757,10 @@ class MainWindow(QtWidgets.QMainWindow):
         None,
         toggle_keep_prev_mode,
       ),
+
       # menu shown at right click
       menu=(
-        createPolyMode,
-        createRectangleMode,
-        createCircleMode,
-        createLineMode,
-        createPointMode,
-        createLineStripMode,
-        None,
-        edit,
+        labelEdit,
         copy,
         delete,
         None,
@@ -751,6 +770,7 @@ class MainWindow(QtWidgets.QMainWindow):
         addPointToEdge,
         removePoint,
       ),
+
       onLoadActive=(
         close,
         createPolyMode,
@@ -914,6 +934,8 @@ class MainWindow(QtWidgets.QMainWindow):
       createPointMode,
       createLineStripMode,
       None,
+      movableMode,
+      None,
       copy,
       delete,
       undo,
@@ -1009,7 +1031,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.zoomWidget.valueChanged.connect(self.paintCanvas)
 
     # Toolbars
-    if self.actions.annotTool:
+    if hasattr(self.actions, 'annotTool'):
       toolbar = ToolBar("annotTools")
       toolbar.setObjectName("annotTools-ToolBar")
       toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
@@ -1019,7 +1041,7 @@ class MainWindow(QtWidgets.QMainWindow):
       utils.addActions(toolbar, self.actions.annotTool)
       self.addToolBar(Qt.LeftToolBarArea, toolbar)
 
-    if self.actions.filemenuTool:
+    if hasattr(self.actions, 'filemenuTool'):
       toolbar = ToolBar("filemenuTool")
       toolbar.setObjectName("filemenuTool-ToolBar")
       toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
@@ -1027,7 +1049,7 @@ class MainWindow(QtWidgets.QMainWindow):
       utils.addActions(toolbar, self.actions.filemenuTool)
       self.addToolBar(Qt.TopToolBarArea, toolbar)
 
-    if self.actions.playTool:
+    if hasattr(self.actions, 'playTool'):
       toolbar = ToolBar("playTool")
       toolbar.setObjectName("playTool-ToolBar")
       toolbar.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -1043,7 +1065,7 @@ class MainWindow(QtWidgets.QMainWindow):
       toolbar.setStyleSheet("QToolButton { padding-left: 40px; padding-right: 40px; }")
       self.addToolBar(Qt.TopToolBarArea, toolbar)
 
-    if self.actions.evalTool:
+    if hasattr(self.actions, 'evalTool'):
       toolbar = ToolBar("evalTool")
       toolbar.setObjectName("evalTool-ToolBar")
       toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
@@ -1081,7 +1103,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.canvas.menus[0].clear()      
     utils.addActions(self.canvas.menus[0], menu)
     self.menus.edit.clear()
-    utils.addActions(self.menus.edit, self.actions.annotOperations + self.actions.editMenu)
+    utils.addActions(self.menus.edit, self.actions.annotCheckableOperations + self.actions.editMenu)
 
   def setDirty(self):
     if self._config["auto_save"] or self.actions.saveAuto.isChecked():
@@ -1104,9 +1126,9 @@ class MainWindow(QtWidgets.QMainWindow):
     self.dirty = False
     self.actions.save.setEnabled(False)
 
-    for action in self.actions.annotOperations + self.actions.evalTools:
+    for action in self.actions.annotCheckableOperations + self.actions.extraCheckableOperations + self.actions.evalTools:
       action.setEnabled(True)
-
+    
     title = __appname__
     if self.filename is not None:
       title = "{} - {}".format(title, self.filename)
@@ -1183,28 +1205,6 @@ class MainWindow(QtWidgets.QMainWindow):
     self.actions.undoLastPoint.setEnabled(drawing)
     self.actions.undo.setEnabled(not drawing)
     self.actions.delete.setEnabled(not drawing)
-
-  def toggleDrawMode(self, toggleAction):
-    edit=True
-    createMode=self.action_to_shape[toggleAction]
-    for action in self.actions.annotOperations:
-      if action != toggleAction:
-        action.setChecked(False)
-      if action.isChecked():
-        edit=False
-
-    self.canvas.activeAction = toggleAction
-    self.canvas.setEditing(edit)
-    self.canvas.createMode = createMode
-    if createMode == "polygon":
-      for action in self.actions.exportSegMenu:
-        action.setEnabled(True)
-    elif createMode == "rectangle":
-      for action in self.actions.exportDetectMenu:
-        action.setEnabled(True)
-    elif createMode == "circle":
-      for action in self.actions.exportDetectMenu:
-        action.setEnabled(True)
 
   def updateFileMenu(self):
     current = self.filename
@@ -1446,6 +1446,39 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tr("Error saving label data"), self.tr("<b>%s</b>") % e
       )
       return False
+
+  def onToggleDrawMode(self, toggleAction):
+    self.actions.movableMode.setChecked(False)
+    edit=True
+    createMode=self.action_to_shape[toggleAction]
+    for action in self.actions.annotCheckableOperations:
+      if action != toggleAction:
+        action.setChecked(False)
+      if action.isChecked():
+        edit=False
+
+    self.canvas.activeAction = toggleAction
+    self.canvas.setEditing(edit)
+    self.canvas.createMode = createMode
+    if createMode == "polygon":
+      for action in self.actions.exportSegMenu:
+        action.setEnabled(True)
+    elif createMode == "rectangle":
+      for action in self.actions.exportDetectMenu:
+        action.setEnabled(True)
+    elif createMode == "circle":
+      for action in self.actions.exportDetectMenu:
+        action.setEnabled(True)
+
+  def onToggleMoveMode(self):
+    move=False
+    if self.actions.movableMode.isChecked():
+      move=True
+      for action in self.actions.annotCheckableOperations:
+        action.setChecked(False)
+
+    self.canvas.activeAction = self.actions.movableMode
+    self.canvas.setMoving(move)
 
   def copySelectedAnnotation(self):
     added_annotations = self.canvas.copySelectedAnnotations()
