@@ -114,6 +114,7 @@ conda activate mindAT
 # Build the standalone executable
 pip install .
 pip install pyinstaller
+pip install -r requirements.txt
 pyinstaller mindAT.spec
 dist/mindAT --version
 ```
