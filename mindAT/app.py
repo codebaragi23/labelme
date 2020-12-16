@@ -21,6 +21,8 @@ import lxml.builder
 import lxml.etree
 
 import imgviz
+import imageio
+import cv2
 from PIL import Image, ImageEnhance
 from qtpy import QtCore
 from qtpy.QtCore import Qt
@@ -49,6 +51,10 @@ from mindAT.widgets import ToolBar
 from mindAT.widgets import LabelQListWidget
 from mindAT.widgets import ZoomWidget
 from mindAT.widgets import QJsonTreeWidget
+
+from mindAT.deepLab.api_header import MAP_TASK
+# 클래스 초기화
+task = MAP_TASK()
 
 # FIXME
 # - [medium] Set max zoom value to something big enough for FitWidth/Window
@@ -2563,7 +2569,17 @@ class MainWindow(QtWidgets.QMainWindow):
       self.canvas.groundtruth = []
       self.canvas.repaint()
       return
-    
+
+    #input
+    test_image = utils.img_data_to_arr(self.imageData)
+    weight_path = os.path.join(os.path.abspath(os.curdir), 'deepLab/weight/trained')
+    result_path = os.path.join(os.path.abspath(os.curdir), 'deepLab/mindAT_result')
+    #inference
+    output = task.inference_mindAT(weight_path, test_image, self.filename + "_gt.jpg")
+    # cv2.imwrite(self.filename + "_gt.jpg", output)
+    # task.inference(weight_path, 'E:/Git/MindAt/mindAT/deepLab/dataset/train/ttttt', result_path)
+
+
     if len(self.imageList) > 0:
       label_file = osp.join(self.lastOpenDir, "../GT", self.getLabelFile(osp.basename(self.filename)))
     else:

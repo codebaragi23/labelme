@@ -1,11 +1,17 @@
 # pip install -r requirements.txt
 
+# local ----------------------------------------
+geopandas-0.8.1-py3-none-any.whl
+GDAL-3.1.3-cp36-cp36m-win_amd64.whl
+Fiona-1.8.17-cp36-cp36m-win_amd64.whl
+Shapely-1.7.1-cp36-cp36m-win_amd64.whl
+
 # base ----------------------------------------
 setuptools
 wheel
 imgviz>=0.11.0
 matplotlib
-numpy
+numpy==1.19.3
 Pillow>=2.8.0
 PyQt5
 qtpy
@@ -15,6 +21,8 @@ tifffile
 lxml
 imagecodecs
 colordict
+opencv-python==4.4.0.44
+colorama==0.4.4
 
 # # Geo ----------------------------------------
 geopandas
