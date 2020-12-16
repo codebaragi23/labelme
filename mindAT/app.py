@@ -665,8 +665,8 @@ class MainWindow(QtWidgets.QMainWindow):
     # )
 
     # Lavel list context menu.
-    labelMenu = QtWidgets.QMenu()
-    utils.addActions(labelMenu, (labelEdit, delete))
+    mindATnu = QtWidgets.QMenu()
+    utils.addActions(mindATnu, (labelEdit, delete))
     self.annotList.setContextMenuPolicy(Qt.CustomContextMenu)
     self.annotList.customContextMenuRequested.connect(
       self.popLabelListMenu
@@ -799,7 +799,7 @@ class MainWindow(QtWidgets.QMainWindow):
       recentFiles=QtWidgets.QMenu(self.tr("Open &Recent")),
       preferences=QtWidgets.QMenu(self.tr("&Preferences")),
       #export_=QtWidgets.QMenu(self.tr("&Export")),
-      labelList=labelMenu,
+      labelList=mindATnu,
     )
     
     utils.addActions(

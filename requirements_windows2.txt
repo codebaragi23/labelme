@@ -1,0 +1,11 @@
+# pipwin install -r requirements_windows.txt
+
+# Geo ----------------------------------------
+pandas
+shapely
+gdal
+fiona
+pyproj
+six
+rtree
+geopandas

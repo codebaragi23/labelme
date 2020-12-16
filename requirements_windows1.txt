@@ -22,15 +22,3 @@ colorama
 
 # coco ----------------------------------------
 pycocotools>=2.0
-
-# Geo ----------------------------------------
-# if windows then using pipwin install
-# pip install pipwin
-pandas
-shapely
-gdal
-fiona
-pyproj
-six
-rtree
-geopandas

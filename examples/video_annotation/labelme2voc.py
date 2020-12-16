@@ -1,1 +1,1 @@
-../semantic_segmentation/labelme2voc.py
+../semantic_segmentation/mindAT2voc.py

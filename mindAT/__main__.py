@@ -6,8 +6,6 @@ import os.path as osp
 import sys
 import yaml
 
-from fiona import _shim, schema
-
 from qtpy import QtCore
 from qtpy import QtWidgets
 
@@ -18,8 +16,7 @@ from mindAT.config import get_config
 from mindAT.config import get_default_config
 from mindAT.logger import logger
 from mindAT.utils import newIcon
-
-from time import sleep
+from mindAT.translate import get_translator_path, support_languages
 
 def main():
   parser = argparse.ArgumentParser()
@@ -168,24 +165,24 @@ def main():
   app.setApplicationName(__appname__)
   app.setWindowIcon(newIcon("icon"))
 
-  support_languages = {'en_US':'English', 'ko_KR':'Korean'}
+  languages = support_languages
   language_code = QtCore.QLocale.system().name()
-  val = support_languages.pop(language_code)
-  old = support_languages;
-  support_languages = {language_code:val}
-  support_languages.update(old)
+  val = languages.pop(language_code)
+  old = languages;
+  languages = {language_code:val}
+  languages.update(old)
 
   returncode = 0
-  while language_code in support_languages.keys():
+  while language_code in languages.keys():
     translator = QtCore.QTranslator()
     translator.load(
       language_code,
-      osp.dirname(osp.abspath(__file__)) + "/translate",
+      get_translator_path(),
     )
     app.installTranslator(translator)
 
     win = MainWindow(
-      support_languages=list(support_languages.values()),
+      support_languages=list(languages.values()),
       config=config,
       filename=filename,
       output_file=output_file,
@@ -200,12 +197,12 @@ def main():
     win.show()
     win.raise_()
     returncode = app.exec_()
-    if returncode - MainWindow.RESTART_CODE in range(len(support_languages)):
-      language_code = list(support_languages.keys())[returncode - MainWindow.RESTART_CODE]
-      val = support_languages.pop(language_code)
-      old = support_languages;
-      support_languages = {language_code:val}
-      support_languages.update(old)
+    if returncode - MainWindow.RESTART_CODE in range(len(languages)):
+      language_code = list(languages.keys())[returncode - MainWindow.RESTART_CODE]
+      val = languages.pop(language_code)
+      old = languages;
+      languages = {language_code:val}
+      languages.update(old)
       win.close()
 
     elif returncode - MainWindow.RESTART_CODE == MainWindow.RESET_CONFIG:

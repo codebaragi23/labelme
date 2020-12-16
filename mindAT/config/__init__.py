@@ -5,9 +5,7 @@ import yaml
 
 from mindAT.logger import logger
 
-
 here = osp.dirname(osp.abspath(__file__))
-
 
 def update_dict(target_dict, new_dict, validate_item=None):
     for key, value in new_dict.items():
@@ -23,8 +21,6 @@ def update_dict(target_dict, new_dict, validate_item=None):
 
 
 # -----------------------------------------------------------------------------
-
-
 def get_default_config(reset_from_default_config=False):
     config_file = osp.join(here, "default_config.yaml")
     with open(config_file) as f:
