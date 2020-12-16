@@ -211,7 +211,7 @@ class Canvas(QtWidgets.QWidget):
         # Project the point to the pixmap's edges.
         pos = self.intersectionPoint(self.current[-1], pos)
       elif (
-        len(self.current) > 1
+        len(self.current) > 2
         and self.createMode == "polygon"
         and self.closeEnough(pos, self.current[0])
       ):
@@ -314,7 +314,6 @@ class Canvas(QtWidgets.QWidget):
       self.unHighlight()
 
     self.edgeSelected.emit(self.hEdge is not None, self.hAnnotation)
-    print(self.hEdge is not None)
     self.vertexSelected.emit(self.hVertex is not None)
 
   def addPointToEdge(self):
@@ -464,9 +463,8 @@ class Canvas(QtWidgets.QWidget):
     if (
       self.double_click == "close"
       and self.canCloseAnnotation()
-      and len(self.current) > 3
     ):
-      self.current.popPoint()
+      #self.current.popPoint()
       self.finalise()
 
   def selectAnnotations(self, annotations):

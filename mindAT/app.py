@@ -315,14 +315,14 @@ class MainWindow(QtWidgets.QMainWindow):
     #   enabled=False,
     # )
 
-    deleteFile = action(
-      self.tr("&Delete File"),
-      self.deleteFile,
-      shortcuts["delete_file"],
-      "delete",
-      self.tr("Delete current label file"),
-      enabled=False,
-    )
+    # deleteFile = action(
+    #   self.tr("&Delete File"),
+    #   self.deleteFile,
+    #   shortcuts["delete_file"],
+    #   "delete",
+    #   self.tr("Delete current label file"),
+    #   enabled=False,
+    # )
 
     saveAuto = action(
       text=self.tr("Save &Automatically"),
@@ -510,12 +510,12 @@ class MainWindow(QtWidgets.QMainWindow):
       enabled=False,
     )
 
-    help = action(
-      self.tr("&Tutorial"),
-      self.tutorial,
-      icon="help",
-      tip=self.tr("Show tutorial page"),
-    )
+    # help = action(
+    #   self.tr("&Tutorial"),
+    #   self.tutorial,
+    #   icon="help",
+    #   tip=self.tr("Show tutorial page"),
+    # )
 
     zoom = QtWidgets.QWidgetAction(self)
     zoom.setDefaultWidget(self.zoomWidget)
@@ -681,7 +681,7 @@ class MainWindow(QtWidgets.QMainWindow):
       #saveAs=saveAs,
       open=open_,
       close=close,
-      deleteFile=deleteFile,
+      #deleteFile=deleteFile,
       toggleKeepPrevMode=toggle_keep_prev_mode,
       delete=delete,
       edit=labelEdit,
@@ -795,7 +795,7 @@ class MainWindow(QtWidgets.QMainWindow):
       view=self.menu(self.tr("&View")),
       #data=self.menu(self.tr("&Dataset")),
       #evaluation=self.menu(self.tr("Ev&aluation")),
-      help=self.menu(self.tr("&Help")),
+      #help=self.menu(self.tr("&Help")),
       recentFiles=QtWidgets.QMenu(self.tr("Open &Recent")),
       preferences=QtWidgets.QMenu(self.tr("&Preferences")),
       #export_=QtWidgets.QMenu(self.tr("&Export")),
@@ -819,7 +819,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.menus.preferences,
         None,
         close,
-        deleteFile,
+        #deleteFile,
         None,
         quit,
       ),
@@ -885,7 +885,7 @@ class MainWindow(QtWidgets.QMainWindow):
     #   ),
     # )
 
-    utils.addActions(self.menus.help, (help,))
+    #utils.addActions(self.menus.help, (help,))
 
     self.menus.file.aboutToShow.connect(self.updateFileMenu)
 
@@ -1119,12 +1119,12 @@ class MainWindow(QtWidgets.QMainWindow):
       title = "{} - {}".format(title, self.filename)
     self.setWindowTitle(title)
 
-    if self.hasLabelFile():
-      self.actions.deleteFile.setEnabled(True)
-      #self.menus.export_.setEnabled(True)
-    else:
-      self.actions.deleteFile.setEnabled(False)
-      #self.menus.export_.setEnabled(False)
+    # if self.hasLabelFile():
+    #   self.actions.deleteFile.setEnabled(True)
+    #   #self.menus.export_.setEnabled(True)
+    # else:
+    #   self.actions.deleteFile.setEnabled(False)
+    #   #self.menus.export_.setEnabled(False)
 
   def toggleActions(self, value=True):
     """Enable/Disable widgets which depend on an opened image."""
@@ -1179,9 +1179,9 @@ class MainWindow(QtWidgets.QMainWindow):
     self.loadAnnotations(self.canvas.annotations)
     self.actions.undo.setEnabled(self.canvas.isAnnotationRestorable)
 
-  def tutorial(self):
-    url = "https://github.com/codebaragi23/mindAT/tree/master/examples/tutorial"  # NOQA
-    webbrowser.open(url)
+  # def tutorial(self):
+  #   url = "https://github.com/codebaragi23/mindAT/tree/master/examples/tutorial"  # NOQA
+  #   webbrowser.open(url)
 
   def toggleDrawingSensitive(self, drawing=True):
     """Toggle drawing sensitive.
@@ -2034,7 +2034,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def _saveFile(self, filename):
     if filename and self.saveLabels(filename):
-      self.addRecentFile(filename)
       self.setClean()
 
   def closeFileDir(self, _value=False):
@@ -2056,24 +2055,24 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = osp.splitext(filename)[0] + ".geojson"
     return label_file
 
-  def deleteFile(self):
-    mb = QtWidgets.QMessageBox
-    msg = self.tr(
-      "You are about to permanently delete this label file, "
-      "proceed anyway?"
-    )
-    answer = mb.warning(self, self.tr("Attention"), msg, mb.Yes | mb.No)
-    if not answer == mb.Yes:      return
+  # def deleteFile(self):
+  #   mb = QtWidgets.QMessageBox
+  #   msg = self.tr(
+  #     "You are about to permanently delete this label file, "
+  #     "proceed anyway?"
+  #   )
+  #   answer = mb.warning(self, self.tr("Attention"), msg, mb.Yes | mb.No)
+  #   if not answer == mb.Yes:      return
 
-    label_file = self.getLabelFile(self.filename)
-    if osp.exists(label_file):
-      os.remove(label_file)
-      logger.info("Label file is removed: {}".format(label_file))
+  #   label_file = self.getLabelFile(self.filename)
+  #   if osp.exists(label_file):
+  #     os.remove(label_file)
+  #     logger.info("Label file is removed: {}".format(label_file))
 
-      item = self.fileListWidget.currentItem()
-      item.setCheckState(Qt.Unchecked)
+  #     item = self.fileListWidget.currentItem()
+  #     item.setCheckState(Qt.Unchecked)
 
-      self.resetState()
+  #     self.resetState()
 
   @Slot()
   def onChangeOutputDir(self, _value=False):

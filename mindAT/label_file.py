@@ -17,8 +17,6 @@ from mindAT import PY2
 from mindAT import QT4
 from mindAT import utils
 
-import geopandas
-
 PIL.Image.MAX_IMAGE_PIXELS = None
 
 
@@ -327,7 +325,7 @@ class LabelFile(object):
 
     try:
       with open(filename, "w") as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(data, f, ensure_ascii=False, indent=2)
       self.filename = filename
     except Exception as e:
       raise LabelFileError(e)

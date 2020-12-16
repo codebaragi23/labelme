@@ -209,7 +209,7 @@ def main():
       win.close()
 
     elif returncode - MainWindow.RESTART_CODE == MainWindow.RESET_CONFIG:
-      config = get_default_config()
+      config = get_default_config(True)
       win.close()
 
     else:
