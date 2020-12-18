@@ -24,8 +24,8 @@ tiff_real_bitdepth: 8
 
 # geo-json configuration
 geo:
-  prop_ann_name: "cropsid"
-  porp_ann_id: null
+  label: "cropsid"
+  id: null
   shape_type: "type"
 
 annotation:

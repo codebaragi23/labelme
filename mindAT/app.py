@@ -35,8 +35,7 @@ from mindAT import QT5
 
 from . import utils
 from mindAT.config import get_config
-from mindAT.label_file import LabelFile
-from mindAT.label_file import LabelFileFromGeo
+from mindAT.label_file import LabelFileGeo
 from mindAT.label_file import LabelFileError
 from mindAT.logger import logger
 from mindAT.annotation import Annotation
@@ -49,15 +48,6 @@ from mindAT.widgets import ToolBar
 from mindAT.widgets import LabelQListWidget
 from mindAT.widgets import ZoomWidget
 from mindAT.widgets import QJsonTreeWidget
-
-# FIXME
-# - [medium] Set max zoom value to something big enough for FitWidth/Window
-
-# TODO(unknown):
-# - [high] Add polygon movement with arrow keys
-# - [high] Deselect annotation when clicking and already selected(?)
-# - [low,maybe] Preview images on file dialogs.
-# - Zoom is too "steppy".
 
 LABEL_COLORMAP = imgviz.label_colormap(value=None)
 class MainWindow(QtWidgets.QMainWindow):
@@ -87,6 +77,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if config is None:
       config = get_config()
     self._config = config
+    self.resetConfig = False
     self.support_languages = support_languages
 
     # set default annotation colors
@@ -157,14 +148,14 @@ class MainWindow(QtWidgets.QMainWindow):
     self.appe_dock.setObjectName(u"Appearance")
     self.appe_dock.setWidget(self.appearance_widget)
     
-    self.flag_dock = self.flag_widget = None
-    self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
-    self.flag_dock.setObjectName("Flags")
-    self.flag_widget = QtWidgets.QListWidget()
-    if config["flags"]:
-      self.loadFlags({k: False for k in config["flags"]})
-    self.flag_dock.setWidget(self.flag_widget)
-    self.flag_widget.itemChanged.connect(self.setDirty)
+    # self.flag_dock = self.flag_widget = None
+    # self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
+    # self.flag_dock.setObjectName("Flags")
+    # self.flag_widget = QtWidgets.QListWidget()
+    # if config["flags"]:
+    #   self.loadFlags({k: False for k in config["flags"]})
+    # self.flag_dock.setWidget(self.flag_widget)
+    # self.flag_widget.itemChanged.connect(self.setDirty)
 
     self.labelList = LabelQListWidget()
     self.labelList.setToolTip(
@@ -238,9 +229,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.setCentralWidget(scrollArea)
 
     features = QtWidgets.QDockWidget.DockWidgetFeatures()
-    for dock in ["file_dock", "flag_dock", "label_dock", "annotator_dock"]:
-      if not hasattr(self, dock):
-        continue;
+    #for dock in ["file_dock", "flag_dock", "label_dock", "annotator_dock"]:
+    for dock in ["file_dock", "label_dock", "annotator_dock"]:
       if self._config[dock]["closable"]:
         features = features | QtWidgets.QDockWidget.DockWidgetClosable
       if self._config[dock]["floatable"]:
@@ -253,16 +243,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.setTabPosition(Qt.RightDockWidgetArea, QtWidgets.QTabWidget.North)
     
-    if hasattr(self, "file_dock"):
-      self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
-    if hasattr(self, "file_dock") and hasattr(self, "annotator_dock"):
-      self.tabifyDockWidget(self.file_dock, self.annotator_dock)
-    if hasattr(self, "appe_dock"):
-      self.addDockWidget(Qt.LeftDockWidgetArea, self.appe_dock)
-    if hasattr(self, "label_dock"):
-      self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
-    if hasattr(self, "label_dock") and hasattr(self, "flag_dock"):
-      self.tabifyDockWidget(self.label_dock, self.flag_dock)
+    self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
+    self.tabifyDockWidget(self.file_dock, self.annotator_dock)
+    self.addDockWidget(Qt.LeftDockWidgetArea, self.appe_dock)
+    self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
+    #self.tabifyDockWidget(self.label_dock, self.flag_dock)
     
     # Actions
     action = functools.partial(utils.newAction, self)
@@ -332,7 +317,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     saveAuto = action(
       text=self.tr("Save &Automatically"),
-      #slot=lambda x: self.actions.saveAuto.setChecked(x),
+      slot=lambda x: self.actions.saveAuto.setChecked(x),
       icon="save",
       tip=self.tr("Save automatically"),
       checkable=True,
@@ -363,10 +348,11 @@ class MainWindow(QtWidgets.QMainWindow):
       tip=self.tr(u"Change display language"),
     )
 
-    reloadConfiguration = action(
-      text=self.tr("Reload &Configuration"),
-      slot=self.onReloadConfig,
-      tip=self.tr(u"Reload configuration from configuraton file"),
+    resetConfiguration = action(
+      text=self.tr("&Reset Configuration"),
+      slot=self.onResetConfig,
+      icon="reset",
+      tip=self.tr(u"Reset configuration from configuraton file"),
     )
 
     close = action(
@@ -395,27 +381,27 @@ class MainWindow(QtWidgets.QMainWindow):
       enabled=False,
       checkable=True,
     )
-    createRectangleMode = action(
-      text=self.tr("Create Rectangle"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createRectangleMode),
-      shortcut=shortcuts["create_rectangle"],
-      icon="rectangle",
-      tip=self.tr("Start drawing rectangles"),
-      enabled=False,
-      checkable=True,
-    )
-    createCircleMode = action(
-      text=self.tr("Create Circle"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createCircleMode),
-      shortcut=shortcuts["create_circle"],
-      icon="circle",
-      tip=self.tr("Start drawing circles"),
-      enabled=False,
-      checkable=True,
-    )
+    # createRectangleMode = action(
+    #   text=self.tr("Create Rectangle"),
+    #   slot=lambda: self.toggleDrawMode(self.actions.createRectangleMode),
+    #   shortcut=shortcuts["create_rectangle"],
+    #   icon="rectangle",
+    #   tip=self.tr("Start drawing rectangles"),
+    #   enabled=False,
+    #   checkable=True,
+    # )
+    # createCircleMode = action(
+    #   text=self.tr("Create Circle"),
+    #   slot=lambda: self.toggleDrawMode(self.actions.createCircleMode),
+    #   shortcut=shortcuts["create_circle"],
+    #   icon="circle",
+    #   tip=self.tr("Start drawing circles"),
+    #   enabled=False,
+    #   checkable=True,
+    # )
     createLineMode = action(
       text=self.tr("Create Line"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createLineMode),
+      slot=lambda: self.toggleDrawMode(self.actions.createLineMode),
       shortcut=shortcuts["create_line"],
       icon="line",
       tip=self.tr("Start drawing lines"),
@@ -424,7 +410,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     createPointMode = action(
       text=self.tr("Create Point"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createPointMode),
+      slot=lambda: self.toggleDrawMode(self.actions.createPointMode),
       shortcut=shortcuts["create_point"],
       icon="point",
       tip=self.tr("Start drawing points"),
@@ -433,7 +419,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     createLineStripMode = action(
       text=self.tr("Create LineStrip"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createLineStripMode),
+      slot=lambda: self.toggleDrawMode(self.actions.createLineStripMode),
       shortcut=shortcuts["create_linestrip"],
       icon="line_strip",
       tip=self.tr("Start drawing linestrip (Ctrl+LeftClick ends creation)"),
@@ -607,17 +593,6 @@ class MainWindow(QtWidgets.QMainWindow):
       enabled=False,
     )
 
-    fill_drawing = action(
-      self.tr("Fill Drawing Polygon"),
-      self.canvas.setFillDrawing,
-      None,
-      "color",
-      self.tr("Fill polygon while drawing"),
-      checkable=True,
-      enabled=True,
-    )
-    fill_drawing.trigger()
-
     exportPixel = action(
       "Pixel Map",
       slot=self.onExportPixelMap,
@@ -709,8 +684,8 @@ class MainWindow(QtWidgets.QMainWindow):
       removePoint=removePoint,
 
       createPolyMode=createPolyMode,
-      createRectangleMode=createRectangleMode,
-      createCircleMode=createCircleMode,
+      # createRectangleMode=createRectangleMode,
+      # createCircleMode=createCircleMode,
       createLineMode=createLineMode,
       createPointMode=createPointMode,
       createLineStripMode=createLineStripMode,
@@ -731,8 +706,8 @@ class MainWindow(QtWidgets.QMainWindow):
       
       annotCheckableOperations=(
         createPolyMode,
-        createRectangleMode,
-        createCircleMode,
+        # createRectangleMode,
+        # createCircleMode,
         createLineMode,
         createPointMode,
         createLineStripMode,
@@ -774,8 +749,8 @@ class MainWindow(QtWidgets.QMainWindow):
       onLoadActive=(
         close,
         createPolyMode,
-        createRectangleMode,
-        createCircleMode,
+        # createRectangleMode,
+        # createCircleMode,
         createLineMode,
         createPointMode,
         createLineStripMode,
@@ -845,7 +820,7 @@ class MainWindow(QtWidgets.QMainWindow):
       (
         changeOutputDir,
         changeLanguage,
-        reloadConfiguration,
+        resetConfiguration,
       ),
     )
 
@@ -854,11 +829,9 @@ class MainWindow(QtWidgets.QMainWindow):
       (
         self.file_dock.toggleViewAction(),
         self.appe_dock.toggleViewAction(),
-        self.flag_dock.toggleViewAction(),
+        #self.flag_dock.toggleViewAction(),
         self.label_dock.toggleViewAction(),
         self.annotator_dock.toggleViewAction(),
-        None,
-        fill_drawing,
         None,
         hideAll,
         showAll,
@@ -872,7 +845,7 @@ class MainWindow(QtWidgets.QMainWindow):
         None,
       ),
     )
-    #self.annotator_dock.toggleViewAction().setEnabled(False)
+    self.annotator_dock.toggleViewAction().setEnabled(False)
 
     utils.addActions(
       self.menus.data,
@@ -918,8 +891,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.action_to_shape = {
       self.actions.createPolyMode : "polygon",
-      self.actions.createRectangleMode : "rectangle",
-      self.actions.createCircleMode : "circle",
+      #self.actions.createRectangleMode : "rectangle",
+      #self.actions.createCircleMode : "circle",
       self.actions.createLineMode : "line",
       self.actions.createPointMode : "point",
       self.actions.createLineStripMode : "linestrip",
@@ -928,8 +901,8 @@ class MainWindow(QtWidgets.QMainWindow):
     # Menu buttons on Left
     self.actions.annotTool = (
       createPolyMode,
-      createRectangleMode,
-      createCircleMode,
+      #createRectangleMode,
+      #createCircleMode,
       createLineMode, 
       createPointMode,
       createLineStripMode,
@@ -942,8 +915,8 @@ class MainWindow(QtWidgets.QMainWindow):
       None,
       zoom,
       fitWidth,
-      None,
-      evalAuto,
+      # None,
+      # evalAuto,
     )
 
     self.actions.filemenuTool = (
@@ -973,7 +946,7 @@ class MainWindow(QtWidgets.QMainWindow):
       logger.warn(
         "If `auto_save` argument is True, `output_file` argument "
         "is ignored and output filename is automatically "
-        "set as IMAGE_BASENAME.json."
+        "set as IMAGE_BASENAME.geojson."
       )
     self.output_file = output_file
     self.output_dir = output_dir
@@ -1019,6 +992,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.settings.value("window/state", QtCore.QByteArray())
     )
     self.file_dock.raise_()
+    #self.file_dock.hide()
 
     # Populate the File menu dynamically.
     self.updateFileMenu()
@@ -1065,22 +1039,22 @@ class MainWindow(QtWidgets.QMainWindow):
       toolbar.setStyleSheet("QToolButton { padding-left: 40px; padding-right: 40px; }")
       self.addToolBar(Qt.TopToolBarArea, toolbar)
 
-    if hasattr(self.actions, 'evalTool'):
+    if self.actions.evalTool:
       toolbar = ToolBar("evalTool")
       toolbar.setObjectName("evalTool-ToolBar")
       toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon | Qt.ToolButtonTextBesideIcon)
 
-      self.evalResCombo = QtWidgets.QComboBox()
-      self.evalResCombo.addItem(self.tr("Pass"))
-      self.evalResCombo.addItem(self.tr("Fail"))
-      self.evalResCombo.setEnabled(False)
-      toolbar.addWidget(self.evalResCombo)
-      self.actions.evalTools = self.actions.evalTools + tuple([self.evalResCombo])
-      self.evalResCombo.setToolTip(self.tr("Check evaluation result"))
+    #   self.evalResCombo = QtWidgets.QComboBox()
+    #   self.evalResCombo.addItem(self.tr("Pass"))
+    #   self.evalResCombo.addItem(self.tr("Fail"))
+    #   self.evalResCombo.setEnabled(False)
+    #   toolbar.addWidget(self.evalResCombo)
+    #   self.actions.evalTools = self.actions.evalTools + tuple([self.evalResCombo])
+    #   self.evalResCombo.setToolTip(self.tr("Check evaluation result"))
 
-      utils.addActions(toolbar, self.actions.evalTool)
-      toolbar.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
-      self.addToolBar(Qt.TopToolBarArea, toolbar)
+    #   utils.addActions(toolbar, self.actions.evalTool)
+    #   toolbar.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+    #   self.addToolBar(Qt.TopToolBarArea, toolbar)
 
     self.populateModeActions()
 
@@ -1134,19 +1108,20 @@ class MainWindow(QtWidgets.QMainWindow):
       title = "{} - {}".format(title, self.filename)
     self.setWindowTitle(title)
 
-    if self.hasLabelFile():
-      self.actions.deleteFile.setEnabled(True)
-      self.menus.export_.setEnabled(True)
-    else:
-      self.actions.deleteFile.setEnabled(False)
-      self.menus.export_.setEnabled(False)
+    # if self.hasLabelFile():
+    #   self.actions.deleteFile.setEnabled(True)
+    #   #self.menus.export_.setEnabled(True)
+    # else:
+    #   self.actions.deleteFile.setEnabled(False)
+    #   #self.menus.export_.setEnabled(False)
 
   def toggleActions(self, value=True):
     """Enable/Disable widgets which depend on an opened image."""
     for z in self.actions.zoomActions:
       z.setEnabled(value)
 
-    for action in self.actions.onLoadActive + self.actions.evalTools:
+    #for action in self.actions.onLoadActive + self.actions.evalTools:
+    for action in self.actions.onLoadActive:
       action.setEnabled(value)
 
   def canvasAnnotationEdgeSelected(self, selected, annotation):
@@ -1170,7 +1145,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.workerFile = None
     self.otherData = None
     self.canvas.resetState()
-    self.annotatorInfosWidget.clear()
+    #self.annotatorInfosWidget.clear()
 
   def currentItem(self):
     items = self.annotList.selectedItems()
@@ -1268,7 +1243,8 @@ class MainWindow(QtWidgets.QMainWindow):
       )
       return
     annotation.label = text
-    annotation.flags = flags
+    #annotation.flags = flags
+    annotation.flags = None
     annotation.group_id = group_id
     if annotation.group_id is None:
       item.setText(annotation.label)
@@ -1397,40 +1373,40 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.loadAnnotations(annotations)
 
-  def loadFlags(self, flags):
-    self.flag_widget.clear()
-    for key, flag in flags.items():
-      item = QtWidgets.QListWidgetItem(key)
-      item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-      item.setCheckState(Qt.Checked if flag else Qt.Unchecked)
-      self.flag_widget.addItem(item)
+  # def loadFlags(self, flags):
+  #   self.flag_widget.clear()
+  #   for key, flag in flags.items():
+  #     item = QtWidgets.QListWidgetItem(key)
+  #     item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+  #     item.setCheckState(Qt.Checked if flag else Qt.Unchecked)
+  #     self.flag_widget.addItem(item)
 
   def saveLabels(self, filename):
-    lf = LabelFile()
+    #lf = LabelFile()
 
     annotations = [utils.annotation_to_dict(item.annotation()) for item in self.annotList]
-    flags = {}
-    for i in range(self.flag_widget.count()):
-      item = self.flag_widget.item(i)
-      key = item.text()
-      flag = item.checkState() == Qt.Checked
-      flags[key] = flag
+    #flags = {}
+    # for i in range(self.flag_widget.count()):
+    #   item = self.flag_widget.item(i)
+    #   key = item.text()
+    #   flag = item.checkState() == Qt.Checked
+    #   flags[key] = flag
     try:
       imagePath = osp.relpath(self.imagePath, osp.dirname(filename))
-      imageData = self.imageData if self.actions.saveWithImageData.isChecked() else None
+      #imageData = self.imageData if self.actions.saveWithImageData.isChecked() else None
       if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
         os.makedirs(osp.dirname(filename))
-      lf.save(
+      self.labelFile.save(
         filename=filename,
         annotations=annotations,
         imagePath=imagePath,
-        imageData=imageData,
+        imageData=None,
         imageHeight=self.image.height(),
         imageWidth=self.image.width(),
         otherData=self.otherData,
-        flags=flags,
+        #flags=flags,
       )
-      self.labelFile = lf
+      #self.labelFile = lf
       items = self.fileListWidget.findItems(
         self.imagePath, Qt.MatchExactly
       )
@@ -1463,12 +1439,12 @@ class MainWindow(QtWidgets.QMainWindow):
     if createMode == "polygon":
       for action in self.actions.exportSegMenu:
         action.setEnabled(True)
-    elif createMode == "rectangle":
-      for action in self.actions.exportDetectMenu:
-        action.setEnabled(True)
-    elif createMode == "circle":
-      for action in self.actions.exportDetectMenu:
-        action.setEnabled(True)
+    # elif createMode == "rectangle":
+    #   for action in self.actions.exportDetectMenu:
+    #     action.setEnabled(True)
+    # elif createMode == "circle":
+    #   for action in self.actions.exportDetectMenu:
+    #     action.setEnabled(True)
 
   def onToggleMoveMode(self):
     move=False
@@ -1605,25 +1581,34 @@ class MainWindow(QtWidgets.QMainWindow):
     self.zoomMode = self.FIT_WIDTH if value else self.MANUAL_ZOOM
     self.adjustScale()
 
-  def onAppearanceChangedCallback(self, brightness=1, contrast=1, show_pixelmap=None, show_groundtruth=None):
-    if show_groundtruth is not None:
-      self.canvas.show_groundtruth = show_groundtruth
-      self.canvas.repaint()
-      return
-
+  def onAppearanceChangedCallback(self, brightness=1, contrast=1):
     img = utils.img_data_to_pil(self.imageData)
-    if show_pixelmap:
-      img = ImageEnhance.Brightness(img).enhance(0)
-      self.canvas.show_pixelmap = True
-    else:
-      img = ImageEnhance.Brightness(img).enhance(brightness)
-      img = ImageEnhance.Contrast(img).enhance(contrast)
-      if show_pixelmap==False:
-        self.canvas.show_pixelmap = False
+    img = ImageEnhance.Brightness(img).enhance(brightness)
+    img = ImageEnhance.Contrast(img).enhance(contrast)
       
     img_data = utils.img_pil_to_data(img)
     qimage = QtGui.QImage.fromData(img_data)
     self.canvas.loadPixmap(QtGui.QPixmap.fromImage(qimage))
+
+  # def onAppearanceChangedCallback(self, brightness=1, contrast=1, show_pixelmap=None, show_groundtruth=None):
+  #   if show_groundtruth is not None:
+  #     self.canvas.show_groundtruth = show_groundtruth
+  #     self.canvas.repaint()
+  #     return
+
+  #   img = utils.img_data_to_pil(self.imageData)
+  #   if show_pixelmap:
+  #     img = ImageEnhance.Brightness(img).enhance(0)
+  #     self.canvas.show_pixelmap = True
+  #   else:
+  #     img = ImageEnhance.Brightness(img).enhance(brightness)
+  #     img = ImageEnhance.Contrast(img).enhance(contrast)
+  #     if show_pixelmap==False:
+  #       self.canvas.show_pixelmap = False
+      
+  #   img_data = utils.img_pil_to_data(img)
+  #   qimage = QtGui.QImage.fromData(img_data)
+  #   self.canvas.loadPixmap(QtGui.QPixmap.fromImage(qimage))
 
   def togglePolygons(self, value):
     for item in self.annotList:
@@ -1633,7 +1618,10 @@ class MainWindow(QtWidgets.QMainWindow):
     label_file = self.getLabelFile(imagename)
 
     try:
-      labelFile = LabelFile(label_file)
+      g = gdal.Open(imagename)
+      geo_transfrom =  g.GetGeoTransform()
+      labelFile = LabelFileGeo(label_file, geo_transfrom, self._config["geo"])
+      imagePath = imagename
     except LabelFileError as e:
       self.errorMessage(
         self.tr("Error opening file"),
@@ -1652,7 +1640,7 @@ class MainWindow(QtWidgets.QMainWindow):
       )
   
     if labelFile.imageData is None:
-      labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+      labelFile.imageData = LabelFileGeo.load_image_file(imagename, self._config["tiff_real_bitdepth"])
       imagePath = imagename
     
     return labelFile, imagePath
@@ -1663,7 +1651,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = None
       try:
-        labelFile = LabelFile(label_file)
+        labelFile = LabelFileGeo(label_file)
       except LabelFileError as e:
         self.errorMessage(
           self.tr("Error opening file"),
@@ -1707,38 +1695,29 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file_without_path = osp.basename(label_file)
       label_file = osp.join(self.output_dir, label_file_without_path)
     
-    geolabel = False
-    if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
-      self.labelFile, self.imagePath = self.load_labelfile(label_file)
-    elif QtCore.QFile.exists(osp.splitext(filename)[0] + ".geojson"):
-      geo = geopandas.read_file(osp.splitext(filename)[0] + ".geojson", encoding='cp949')
-      geo = geo._to_geo(na="null", show_bbox=False)
-      
-      g = gdal.Open(filename)
-      geo_transfrom =  g.GetGeoTransform()
-      self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
-      self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
+    if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
+      self.labelFile, self.imagePath = self.load_labelfile(filename)
+      self.labelFile.imageData = LabelFileGeo.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.labelFile.filename = label_file
       self.labelFile.imagePath = filename
       self.imagePath = filename
-      geolabel = True
-    elif all(QtCore.QFile.exists(osp.splitext(filename)[0] + geo_file_ext) for geo_file_ext in [".dbf", ".shp", ".shx"]):
-      dbf_file = geopandas.read_file(osp.splitext(filename)[0] + ".shp", encoding='cp949')
-      geo = dbf_file._to_geo(na="null", show_bbox=False)
+    # elif all(QtCore.QFile.exists(osp.splitext(filename)[0] + geo_file_ext) for geo_file_ext in [".dbf", ".shp", ".shx"]):
+    #   dbf_file = geopandas.read_file(osp.splitext(filename)[0] + ".shp", encoding='cp949')
+    #   geo = dbf_file._to_geo(na="null", show_bbox=False)
 
-      #TODEBUG
-      dbf_file.to_file(label_file.replace(".json", ".geojson"), driver='GeoJSON')
+    #   #TODEBUG
+    #   dbf_file.to_file(label_file.replace(".geojson", ".geojson"), driver='GeoJSON')
       
-      g = gdal.Open(filename)
-      geo_transfrom =  g.GetGeoTransform()
-      self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
-      self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
-      self.labelFile.filename = label_file
-      self.labelFile.imagePath = filename
-      self.imagePath = filename
-      geolabel = True
+    #   g = gdal.Open(filename)
+    #   geo_transfrom =  g.GetGeoTransform()
+    #   self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
+    #   self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
+    #   self.labelFile.filename = label_file
+    #   self.labelFile.imagePath = filename
+    #   self.imagePath = filename
+    #   geolabel = True
     else:
-      self.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
+      self.imageData = LabelFileGeo.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.imagePath = filename
 
     if self.labelFile:
@@ -1747,14 +1726,14 @@ class MainWindow(QtWidgets.QMainWindow):
       imageList = [self.imagePath]
       if len(self.imageList) > 0:      imageList = self.imageList
       annotations = self.labelFile.annotations
-      # bbox detection
-      if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
-        for action in self.actions.exportDetectMenu:
-          action.setEnabled(True)
-      # segmentation
-      elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
-        for action in self.actions.exportSegMenu:
-          action.setEnabled(True)
+      # # bbox detection
+      # if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+      #   for action in self.actions.exportDetectMenu:
+      #     action.setEnabled(True)
+      # # segmentation
+      # elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
+      #   for action in self.actions.exportSegMenu:
+      #     action.setEnabled(True)
 
     image = QtGui.QImage.fromData(self.imageData)
 
@@ -1774,20 +1753,18 @@ class MainWindow(QtWidgets.QMainWindow):
       return False
     self.image = image
     self.filename = filename
-    flags = {k: False for k in self._config["flags"] or []}
+    #flags = {k: False for k in self._config["flags"] or []}
     if self.labelFile:
       self.loadLabels(self.labelFile.annotations)
-      if len(self.labelFile.flags) > 0:
-        flags.update(self.labelFile.flags)
-        self.flag_dock.raise_()
-      else:
-        self.label_dock.raise_()
+      # if len(self.labelFile.flags) > 0:
+      #   flags.update(self.labelFile.flags)
+      #   self.flag_dock.raise_()
+      # else:
+      #   self.label_dock.raise_()
 
-    self.loadFlags(flags)
+    #self.loadFlags(flags)
     if self._config["keep_prev"] and self.noAnnotations():
       self.loadAnnotations(prev_annotations, replace=False)
-      self.setDirty()
-    elif geolabel:
       self.setDirty()
     else:
       self.setClean()
@@ -1795,11 +1772,11 @@ class MainWindow(QtWidgets.QMainWindow):
     # set brightness constrast values
     brightness = self.appearance_widget.slider_brightness.value() / 50;
     contrast = self.appearance_widget.slider_contrast.value() / 50
-    self.onAppearanceChangedCallback(brightness=brightness, contrast=contrast)
+    self.onAppearanceChangedCallback()
     self.canvas.setEnabled(True)
 
-    if len(self.canvas.annotations) > 0:
-      self.menus.export_.setEnabled(True)
+    # if len(self.canvas.annotations) > 0:
+    #   self.menus.export_.setEnabled(True)
 
     self.appearance_widget.setAnnotations(self.canvas.annotations)
     self.appearance_widget.setEnabled(True)
@@ -1823,22 +1800,22 @@ class MainWindow(QtWidgets.QMainWindow):
     self.toggleActions(True)
     self.status(self.tr("Loaded %s") % osp.basename(str(filename)))
 
-    # auto-run evaluation
-    if self.actions.evalAuto.isChecked():
-      self.onEvalAI()
+    # # auto-run evaluation
+    # if self.actions.evalAuto.isChecked():
+    #   self.onEvalAI()
 
-    # set annotator widget
-    if len(self.imageList) > 0:
-      worker_file = osp.join(self.lastOpenDir, "worker.json")
-    else:
-      worker_file = osp.join(osp.dirname(self.filename), "worker.json")
-    if self.workerFile != worker_file:
-      if osp.exists(worker_file):
-        self.workerFile = worker_file
-        self.annotatorInfosWidget.loadJson(worker_file)
-      else:
-        self.workerFile = None
-        self.annotatorInfosWidget.clear()
+    # # set annotator widget
+    # if len(self.imageList) > 0:
+    #   worker_file = osp.join(self.lastOpenDir, "worker.geojson")
+    # else:
+    #   worker_file = osp.join(osp.dirname(self.filename), "worker.geojson")
+    # if self.workerFile != worker_file:
+    #   if osp.exists(worker_file):
+    #     self.workerFile = worker_file
+    #     self.annotatorInfosWidget.loadJson(worker_file)
+    #   else:
+    #     self.workerFile = None
+    #     self.annotatorInfosWidget.clear()
         
     return True
 
@@ -1886,13 +1863,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def closeEvent(self, event):
     if not self.mayContinue():      event.ignore()
-    self.settings.setValue(
-      "filename", self.filename if self.filename else ""
-    )
-    self.settings.setValue("window/size", self.size())
-    self.settings.setValue("window/position", self.pos())
-    self.settings.setValue("window/state", self.saveState())
-    self.settings.setValue("recentFiles", self.recentFiles)
+
+    if self.resetConfig:
+      fname = self.settings.fileName()
+      if osp.exists(fname):        os.remove(fname)
+      self.resetConfig = False
+    else:
+      self.settings.setValue(
+        "filename", self.filename if self.filename else ""
+      )
+      self.settings.setValue("window/size", self.size())
+      self.settings.setValue("window/position", self.pos())
+      self.settings.setValue("window/state", self.saveState())
+      self.settings.setValue("recentFiles", self.recentFiles)
     # ask the use for where to save the labels
     # self.settings.setValue('window/geometry', self.saveGeometry())
 
@@ -1940,6 +1923,7 @@ class MainWindow(QtWidgets.QMainWindow):
       filename = self.imageList[currIndex - 1]
       if filename:
         self.loadFile(filename)
+        self.openPrevImg()
 
     self._config["keep_prev"] = keep_prev
 
@@ -1969,6 +1953,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.filename = filename
     if self.filename and load:
       self.loadFile(self.filename)
+      if not len(self.labelFile.annotations) > 0:
+        self.openNextImg()
 
     self._config["keep_prev"] = keep_prev
 
@@ -1980,9 +1966,7 @@ class MainWindow(QtWidgets.QMainWindow):
       "*.{}".format(fmt.data().decode())
       for fmt in QtGui.QImageReader.supportedImageFormats()
     ]
-    filters = self.tr("Image & Label files (%s)") % " ".join(
-      formats + ["*%s" % LabelFile.suffix]
-    )
+    filters = self.tr("Image & Label files (%s)") % " ".join(formats)
     filename = QtWidgets.QFileDialog.getOpenFileName(
       self,
       self.tr("%s - Choose Image or Label file") % __appname__,
@@ -2015,7 +1999,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def saveFileDialog(self):
     caption = self.tr("%s - Choose File") % __appname__
-    filters = self.tr("Label files (*%s)") % LabelFile.suffix
+    filters = self.tr("Label files (*%s)") % LabelFileGeo.suffix
     if self.output_dir:
       dlg = QtWidgets.QFileDialog(
         self, caption, self.output_dir, filters
@@ -2024,24 +2008,24 @@ class MainWindow(QtWidgets.QMainWindow):
       dlg = QtWidgets.QFileDialog(
         self, caption, self.currentPath(), filters
       )
-    dlg.setDefaultSuffix(LabelFile.suffix[1:])
+    dlg.setDefaultSuffix(LabelFileGeo.suffix[1:])
     dlg.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
     dlg.setOption(QtWidgets.QFileDialog.DontConfirmOverwrite, False)
     dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog, False)
     basename = osp.basename(osp.splitext(self.filename)[0])
     if self.output_dir:
       default_label_file = osp.join(
-        self.output_dir, basename + LabelFile.suffix
+        self.output_dir, basename + LabelFileGeo.suffix
       )
     else:
       default_label_file = osp.join(
-        self.currentPath(), basename + LabelFile.suffix
+        self.currentPath(), basename + LabelFileGeo.suffix
       )
     filename = dlg.getSaveFileName(
       self,
       self.tr("Choose File"),
       default_label_file,
-      self.tr("Label files (*%s)") % LabelFile.suffix,
+      self.tr("Label files (*%s)") % LabelFileGeo.suffix,
     )
     if isinstance(filename, tuple):
       filename, _ = filename
@@ -2049,7 +2033,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def _saveFile(self, filename):
     if filename and self.saveLabels(filename):
-      self.addRecentFile(filename)
       self.setClean()
 
   def closeFileDir(self, _value=False):
@@ -2062,13 +2045,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.toggleActions(False)
     self.canvas.setEnabled(False)
-    self.actions.saveAs.setEnabled(False)
+    #self.actions.saveAs.setEnabled(False)
 
   def getLabelFile(self, filename):
-    if filename.lower().endswith(".json"):
+    if filename.lower().endswith(".geojson"):
       label_file = filename
     else:
-      label_file = osp.splitext(filename)[0] + ".json"
+      label_file = osp.splitext(filename)[0] + ".geojson"
     return label_file
 
   def deleteFile(self):
@@ -2147,14 +2130,15 @@ class MainWindow(QtWidgets.QMainWindow):
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + languages.index(language))
 
   @Slot()
-  def onReloadConfig(self):
+  def onResetConfig(self):
     mb = QtWidgets.QMessageBox
     msg = self.tr(
-      "Discard all changes in memory and reload everthing from file,"
+      "Discard all changes in memory and reload everthing from file, "
       "proceed anyway?"
     )
     answer = mb.warning(self, self.tr("Attention"), msg, mb.Yes | mb.No)
     if not answer == mb.Yes:      return
+    self.resetConfig = True
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + MainWindow.RESET_CONFIG)
 
   @Slot()
@@ -2180,8 +2164,8 @@ class MainWindow(QtWidgets.QMainWindow):
     AnnotationType = ""
     annotations = self.getAllAnnotations(imageList)
     # bbox detection
-    if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
-      return False
+    # if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+    #   return False
     
     print("Creating pixel map:", self.output_dir)
     classes = {"__ignore__":-1, "_background_":0, }
@@ -2206,7 +2190,7 @@ class MainWindow(QtWidgets.QMainWindow):
       labels=label_colordict,
     )
     try:
-      filename = osp.join(self.output_dir, "PixelMap", "labels.json")
+      filename = osp.join(self.output_dir, "PixelMap", "labels.geojson")
       with open(filename, "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
@@ -2396,10 +2380,11 @@ class MainWindow(QtWidgets.QMainWindow):
     AnnotationType = ""
     annotations = self.getAllAnnotations(imageList)
     # bbox detection
-    if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
-      AnnotationType = "bbox_detection"
-    # segmentation
-    elif any(annotation["shape_type"]=="polygon" for annotation in annotations):
+    # if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+    #   AnnotationType = "bbox_detection"
+    # # segmentation
+    # el
+    if any(annotation["shape_type"]=="polygon" for annotation in annotations):
       AnnotationType = "segmenation"
 
     print("Creating dataset VOC:", self.output_dir)
@@ -2437,8 +2422,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     annotations = self.getAllAnnotations(imageList)
     # bbox detection
-    if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
-      return False
+    # if all(annotation["shape_type"]=="rectangle" for annotation in annotations):
+    #   return False
 
     print("Creating dataset COCO:", self.output_dir)
     classes = {"__ignore__":-1, "_background_":0, }
@@ -2480,7 +2465,7 @@ class MainWindow(QtWidgets.QMainWindow):
       ],
     )
 
-    out_ann_file = osp.join(self.output_dir, "COCO", "annotations.json")
+    out_ann_file = osp.join(self.output_dir, "COCO", "annotations.geojson")
     for image_id, imagename in enumerate(imageList):
       base = osp.splitext(osp.basename(imagename))[0]
       out_img_file = osp.join(self.output_dir, "COCO", "JPEGImages", base + ".jpg")
@@ -2527,13 +2512,13 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
           masks[instance] = mask
 
-        if shape_type == "rectangle":
-          (x1, y1), (x2, y2) = points
-          x1, x2 = sorted([x1, x2])
-          y1, y2 = sorted([y1, y2])
-          points = [x1, y1, x2, y1, x2, y2, x1, y2]
-        else:
-          points = np.asarray(points).flatten().tolist()
+        # if shape_type == "rectangle":
+        #   (x1, y1), (x2, y2) = points
+        #   x1, x2 = sorted([x1, x2])
+        #   y1, y2 = sorted([y1, y2])
+        #   points = [x1, y1, x2, y1, x2, y2, x1, y2]
+        # else:
+        points = np.asarray(points).flatten().tolist()
 
         segmentations[instance].append(points)
       segmentations = dict(segmentations)
@@ -2581,15 +2566,6 @@ class MainWindow(QtWidgets.QMainWindow):
       with open(out_ann_file, "w") as f:
         json.dump(data, f)
   
-  # [temperally-code] load GT images
-  @property
-  def GTimageList(self):
-    list = []
-    for i in range(self.fileListWidget.count()):
-      item = self.fileListWidget.item(i)
-      list.append(osp.join(self.lastOpenDir, "../GT", item.text()))
-    return list
-
   def onEvalAI(self):
     if not self.actions.evalAuto.isChecked():
       self.appearance_widget.setEnabledEval(False)
@@ -2769,7 +2745,7 @@ class MainWindow(QtWidgets.QMainWindow):
         label_file = osp.join(self.output_dir, label_file_without_path)
       item = QtWidgets.QListWidgetItem(osp.basename(file))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
+      if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
         item.setCheckState(Qt.Checked)
       else:
         item.setCheckState(Qt.Unchecked)
@@ -2805,7 +2781,7 @@ class MainWindow(QtWidgets.QMainWindow):
         label_file = osp.join(self.output_dir, label_file_without_path)
       item = QtWidgets.QListWidgetItem(osp.basename(filename))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
+      if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
         item.setCheckState(Qt.Checked)
       else:
         item.setCheckState(Qt.Unchecked)

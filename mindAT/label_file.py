@@ -7,6 +7,10 @@ import os.path as osp
 import cv2
 import PIL.Image
 import tifffile
+import geopandas
+
+import affine
+import copy
 
 from mindAT import __version__
 from mindAT.logger import logger
@@ -32,20 +36,17 @@ def open(name, mode):
 class LabelFileError(Exception):
   pass
 
-def LabelFileFromGeo(geo, geo_transfrom, config=None):
-  labelFile = LabelFile()
-  labelFile.fromGeo(geo, geo_transfrom, config)
-  return labelFile
+class LabelFileGeo(object):
+  suffix = ".geojson"
 
-class LabelFile(object):
-  suffix = ".json"
-
-  def __init__(self, filename=None):
+  def __init__(self, filename=None, geo_transfrom=None, config=None):
     self.annotations = []
     self.imagePath = None
     self.imageData = None
-    if filename is not None:
-      self.load(filename)
+    self.label_name = config["label"]
+    self.shape_type_name = config["shape_type"]
+    if filename is not None and geo_transfrom is not None:
+      self.load(filename, geo_transfrom)
     self.filename = filename
 
   @staticmethod
@@ -69,6 +70,7 @@ class LabelFile(object):
         image_pil = PIL.Image.fromarray(image)
       else:
         image_pil = PIL.Image.open(filename)
+
     except IOError:
       logger.error("Failed opening image file: {}".format(filename))
       return
@@ -87,7 +89,7 @@ class LabelFile(object):
       f.seek(0)
       return f.read()
 
-  def fromGeo(self, data, geo_transfrom, config=None):
+  def load(self, filename, geo_transfrom):
     keys = [
       "features",  # polygonal annotations
     ]
@@ -97,197 +99,69 @@ class LabelFile(object):
       "geometry",
     ]
     annotation_keys = [
-      "id",
-      "type",
-      "geometry",
-    ]
-
-    # relative path from label file to relative path from cwd
-    # annotations = [
-    #   dict(
-    #     # label=feature["properties"]["작물ID"],
-    #     # shape_type=feature["geometry"]["type"].lower(),
-    #     # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-
-    #     # t1
-    #     # label=str(feature["properties"]["속성"]),
-    #     # shape_type=feature["geometry"]["type"].lower(),
-    #     # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-
-    #     # t2
-    #     # label=str(feature["properties"]["ann_name"]),
-    #     # shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
-    #     # #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-    #     # points=[[x, y] for x, y in feature["geometry"]["coordinates"][0]],
-
-    #     # t3
-    #     label=str(feature["properties"]["ann_name"]),
-    #     shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
-    #     points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-        
-    #     flags=feature.get("flags", {}),
-    #     group_id=feature.get("group_id", None),
-    #     other_data={
-    #       k:v for k, v in feature.items() if k not in annotation_keys
-    #     },
-    #   )
-    #   for feature in data["features"]
-    # ]
-
-    annotations = []
-    for feature in data["features"]:
-      if feature["geometry"][config["shape_type"]].lower() == "multipolygon":
-        multilen = len(feature["geometry"]["coordinates"])
-        for i in range(multilen-1):
-          annot = dict(
-            label=str(feature["properties"][config["prop_ann_name"]]),
-            shape_type="polygon",
-            points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][i][0]],
-            
-            flags=feature.get("flags", {}),
-            group_id=feature.get("group_id", None),
-            other_data={
-              k:v for k, v in feature.items() if k not in annotation_keys
-            },
-          )
-          annotations.append(annot)
-
-        annot = dict(
-          label=str(feature["properties"][config["prop_ann_name"]]),
-          shape_type="polygon",
-          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
-          
-          flags=feature.get("flags", {}),
-          group_id=feature.get("group_id", None),
-          other_data={
-            k:v for k, v in feature.items() if k not in annotation_keys
-          },
-        )
-      else:
-        annot = dict(
-          label=str(feature["properties"][config["prop_ann_name"]]),
-          shape_type=feature["geometry"][config["shape_type"]].lower(),
-          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-          
-          flags=feature.get("flags", {}),
-          group_id=feature.get("group_id", None),
-          other_data={
-            k:v for k, v in feature.items() if k not in annotation_keys
-          },
-        )
-      annotations.append(annot)
-
-    otherData = {k:v for k, v in data.items() if k not in keys}
-    
-    self.flags = {}
-    self.imagePath = None
-    self.imageData = None
-    self.filename = None
-    self.annotations = annotations
-    self.otherData = otherData
-
-  def load(self, filename):
-    keys = [
-      "version",
-      "imageData",
-      "imagePath",
-      "annotations",  # polygonal annotations
-      "flags",  # image level flags
-      "imageHeight",
-      "imageWidth",
-    ]
-    annotation_keys = [
-      "label",
-      "shape_type",
-      "points",
-      "group_id",
-      "flags",
+      self.label_name,
     ]
 
     try:
       with open(filename, "r") as f:
         data = json.load(f)
-        version = data.get("version")
-        if version is None and format == "simple":
-          logger.warn(
-            "Loading JSON file ({}) of unknown version".format(
-              filename
+
+      self.transform = affine.Affine.from_gdal(*geo_transfrom)
+      transform = ~self.transform
+      annotations = []
+      for feature in data["features"]:
+        if feature["geometry"][self.shape_type_name].lower() == "multipolygon":
+          multilen = len(feature["geometry"]["coordinates"])
+          for i in range(multilen-1):
+            annot = dict(
+              label=str(feature["properties"][self.label_name]),
+              shape_type="polygon",
+              points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][i][0]],
+              
+              flags={},
+              group_id=None,
+              other_data={
+                k:v for k, v in feature["properties"].items() if k not in annotation_keys
+              },
             )
+            annotations.append(annot)
+
+          annot = dict(
+            label=str(feature["properties"][self.label_name]),
+            shape_type="polygon",
+            points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
+
+            flags={},
+            group_id=None,
+            other_data={
+              k:v for k, v in feature["properties"].items() if k not in annotation_keys
+            },
           )
-        elif version.split(".")[0] != __version__.split(".")[0]:
-          logger.warn(
-            "This JSON file ({}) may be incompatible with "
-            "current mindAT. version in file: {}, "
-            "current version: {}".format(
-              filename, version, __version__
-            )
+        else:
+          annot = dict(
+            label=str(feature["properties"][self.label_name]),
+            shape_type=feature["geometry"][self.shape_type_name].lower(),
+            points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][0]],
+            
+            flags={},
+            group_id=None,
+            other_data={
+              k:v for k, v in feature["properties"].items() if k not in annotation_keys
+            },
           )
-      
-      if data["imageData"] is not None:
-        imageData = base64.b64decode(data["imageData"])
-        if PY2 and QT4:
-          imageData = utils.img_data_to_png_data(imageData)
-      elif data["imagePath"] is not None:
-        # relative path from label file to relative path from cwd
-        imagePath = osp.join(osp.dirname(filename), data["imagePath"])
-        imageData = self.load_image_file(imagePath)
-      else:
-        imageData = None
-
-      flags = data.get("flags") or {}
-      imagePath = data["imagePath"]
-      if imageData is not None:
-        self._check_image_height_and_width(
-          base64.b64encode(imageData).decode("utf-8"),
-          data.get("imageHeight"),
-          data.get("imageWidth"),
-        )
-      annotations = [
-        dict(
-          label=annot["label"],
-          shape_type=annot.get("shape_type", "polygon"),
-          points=annot["points"],
-          flags=annot.get("flags", {}),
-          group_id=annot.get("group_id"),
-          other_data={
-            k: v for k, v in annot.items() if k not in annotation_keys
-          },
-        )
-        for annot in data["annotations"]
-      ]
-
-      otherData = {}
-      for key, value in data.items():
-        if key not in keys:
-          otherData[key] = value
-
+        annotations.append(annot)
+    
     except Exception as e:
       raise LabelFileError(e)
 
-    # Only replace data after everything is loaded.
-    self.flags = flags
-    self.annotations = annotations
-    self.imagePath = imagePath
-    self.imageData = imageData
-    self.filename = filename
-    self.otherData = otherData
+    del data["features"]
 
-  @staticmethod
-  def _check_image_height_and_width(imageData, imageHeight, imageWidth):
-    img_arr = utils.img_b64_to_arr(imageData)
-    if imageHeight is not None and img_arr.shape[0] != imageHeight:
-      logger.error(
-        "imageHeight does not match with imageData or imagePath, "
-        "so getting imageHeight from actual image."
-      )
-      imageHeight = img_arr.shape[0]
-    if imageWidth is not None and img_arr.shape[1] != imageWidth:
-      logger.error(
-        "imageWidth does not match with imageData or imagePath, "
-        "so getting imageWidth from actual image."
-      )
-      imageWidth = img_arr.shape[1]
-    return imageHeight, imageWidth
+    self.flags = {}
+    self.imagePath = None
+    self.imageData = None
+    self.filename = None
+    self.annotations = annotations
+    self.otherData = data;
 
   def save(
     self,
@@ -300,43 +174,33 @@ class LabelFile(object):
     otherData=None,
     flags=None,
   ):
-    if imageData is not None:
-      imageData = base64.b64encode(imageData).decode("utf-8")
-      imageHeight, imageWidth = self._check_image_height_and_width(
-        imageData, imageHeight, imageWidth
-      )
-    if otherData is None:
-      otherData = {}
-    if flags is None:
-      flags = {}
-    
-    data = dict(
-      version=__version__,
-      flags=flags,
-      annotations=annotations,
-      imagePath=imagePath,
-      imageData=imageData,
-      imageHeight=imageHeight,
-      imageWidth=imageWidth,
-    )
-    for key, value in otherData.items():
-      assert key not in data
-      data[key] = value
+    data = self.otherData
+    transform = self.transform
 
-    # if format == 'GeoJSON':
-    #   data = dict(
-    #     type=otherData.get("type", "FeatureCollection"),
-    #     crs=otherData.get("crs", { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32652" } }),
-    #     features= [dict({"type":"Feature", "properties":{"관리번호":None, "작물ID": k["label"], "작업위치":None}, "geometry":{"type":k["shape_type"].capitalize(), "coordinates":[[[x, -y] for x, y in k["points"] ]]}}) for k in annotations]
-    #   )
+    features = []
+    for annot in annotations:
+      geometry = dict(
+        type=annot["shape_type"].capitalize(),
+        coordinates=[[list(transform*(x, y)) for x, y in annot["points"] ]]
+      )
+      properties = dict({self.label_name:annot["label"]})
+      properties.update(annot["other_data"])
+      feature = dict(
+        type="Feature",
+        properties=properties,
+        geometry=geometry,
+      )
+      features.append(feature)
+
+    data["features"] = features
 
     try:
       with open(filename, "w") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(data, f, ensure_ascii=False)
       self.filename = filename
     except Exception as e:
       raise LabelFileError(e)
 
   @staticmethod
   def is_label_file(filename):
-    return osp.splitext(filename)[1].lower() == LabelFile.suffix
+    return osp.splitext(filename)[1].lower() == LabelFileGeo.suffix

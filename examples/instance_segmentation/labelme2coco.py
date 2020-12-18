@@ -85,7 +85,7 @@ def main():
     for image_id, filename in enumerate(label_files):
         print("Generating dataset from:", filename)
 
-        label_file = mindAT.LabelFile(filename=filename)
+        label_file = mindAT.LabelFileGeo(filename=filename)
 
         base = osp.splitext(osp.basename(filename))[0]
         out_img_file = osp.join(args.output_dir, "JPEGImages", base + ".jpg")

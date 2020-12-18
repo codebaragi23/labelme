@@ -218,13 +218,13 @@
     </message>
     <message>
         <location filename="../app.py" line="354"/>
-        <source>Reload &amp;Configuration</source>
-        <translation>재구성</translation>
+        <source>&amp;Reset Configuration</source>
+        <translation>환경 복구(&amp;R)</translation>
     </message>
     <message>
         <location filename="../app.py" line="354"/>
-        <source>Reload configuration from configuraton file</source>
-        <translation>환경 설정 파일로부터 재구성</translation>
+        <source>Reset configuration from configuraton file</source>
+        <translation>환경 설정 파일로부터 복구</translation>
     </message>
     <message>
         <location filename="../app.py" line="281"/>
@@ -320,6 +320,11 @@
         <location filename="../app.py" line="357"/>
         <source>Create LineStrip</source>
         <translation>선 스트립 생성</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="378"/>
+        <source>Move</source>
+        <translation>이동</translation>
     </message>
     <message>
         <location filename="../app.py" line="378"/>
@@ -780,6 +785,11 @@
         <location filename="../app.py" line="1747"/>
         <source>You are about to restart to change the language, proceed anyway?</source>
         <translation>언어 변경을 위해 다시 시작하려고 합니다. 계속 하시겠습니까?</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="2135"/>
+        <source>Discard all changes in memory and reload everthing from file, proceed anyway?</source>
+        <translation>모든 설정이 초기화 되며, 파일에서 불러옵니다. 계속 하시겠습니까?</translation>
     </message>
     <message>
         <location filename="../app.py" line="1946"/>

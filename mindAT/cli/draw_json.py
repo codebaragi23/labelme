@@ -6,7 +6,7 @@ import sys
 import imgviz
 import matplotlib.pyplot as plt
 
-from mindAT.label_file import LabelFile
+from mindAT.label_file import LabelFileGeo
 from mindAT import utils
 
 
@@ -18,7 +18,7 @@ def main():
   parser.add_argument("json_file")
   args = parser.parse_args()
 
-  label_file = LabelFile(args.json_file)
+  label_file = LabelFileGeo(args.json_file)
   img = utils.img_data_to_arr(label_file.imageData)
 
   label_name_to_value = {"_background_": 0}

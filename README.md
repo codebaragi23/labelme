@@ -29,7 +29,7 @@
 
 ## Description
 
-Labelme is a graphical image annotation tool inspired by <http://mindAT.csail.mit.edu>.  
+mindAT is a graphical image annotation tool inspired by <http://mindAT.csail.mit.edu>.  
 It is written in Python and uses Qt for its graphical interface.
 
 <img src="examples/instance_segmentation/data_dataset_voc/JPEGImages/2011_000006.jpg" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationClassPNG/2011_000006.png" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationClassVisualization/2011_000006.jpg" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationObjectPNG/2011_000006.png" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationObjectVisualization/2011_000006.jpg" width="19%" />  
