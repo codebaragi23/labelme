@@ -374,7 +374,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     createPolyMode = action(
       text=self.tr("Create Polygons"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createPolyMode),
+      slot=lambda: self.toggleDrawMode(self.actions.createPolyMode),
       shortcut=shortcuts["create_polygon"],
       icon="polygon",
       tip=self.tr("Start drawing polygons"),
@@ -429,7 +429,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     movableMode = action(
       text=self.tr("Move"),
-      slot=self.onToggleMoveMode,
+      slot=self.toggleMoveMode,
       shortcut=shortcuts["move_annotation"],
       icon="move",
       tip=self.tr("Move the selected annotations"),
@@ -1420,7 +1420,7 @@ class MainWindow(QtWidgets.QMainWindow):
       )
       return False
 
-  def onToggleDrawMode(self, toggleAction):
+  def toggleDrawMode(self, toggleAction):
     self.actions.movableMode.setChecked(False)
     edit=True
     createMode=self.action_to_shape[toggleAction]
@@ -1443,7 +1443,7 @@ class MainWindow(QtWidgets.QMainWindow):
     #   for action in self.actions.exportDetectMenu:
     #     action.setEnabled(True)
 
-  def onToggleMoveMode(self):
+  def toggleMoveMode(self):
     move=False
     if self.actions.movableMode.isChecked():
       move=True
