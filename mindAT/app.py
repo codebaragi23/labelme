@@ -35,8 +35,7 @@ from mindAT import QT5
 
 from . import utils
 from mindAT.config import get_config
-from mindAT.label_file import LabelFile
-from mindAT.label_file import LabelFileFromGeo
+from mindAT.label_file import LabelFileGeo
 from mindAT.label_file import LabelFileError
 from mindAT.logger import logger
 from mindAT.annotation import Annotation
@@ -87,6 +86,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if config is None:
       config = get_config()
     self._config = config
+    self.resetConfig = False
     self.support_languages = support_languages
 
     # set default annotation colors
@@ -151,11 +151,11 @@ class MainWindow(QtWidgets.QMainWindow):
     self.file_dock.setObjectName(u"Files")
     self.file_dock.setWidget(fileListWidget)
 
-    # self.appearance_widget = AppearanceWidget(self.onAppearanceChangedCallback)
-    # self.appearance_widget.setEnabled(False)
-    # self.appe_dock = QtWidgets.QDockWidget(self.tr(u"Appearance"), self)
-    # self.appe_dock.setObjectName(u"Appearance")
-    # self.appe_dock.setWidget(self.appearance_widget)
+    self.appearance_widget = AppearanceWidget(self.onAppearanceChangedCallback)
+    self.appearance_widget.setEnabled(False)
+    self.appe_dock = QtWidgets.QDockWidget(self.tr(u"Appearance"), self)
+    self.appe_dock.setObjectName(u"Appearance")
+    self.appe_dock.setWidget(self.appearance_widget)
     
     # self.flag_dock = self.flag_widget = None
     # self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
@@ -254,8 +254,8 @@ class MainWindow(QtWidgets.QMainWindow):
     
     #self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
     #self.tabifyDockWidget(self.file_dock, self.annotator_dock)
-    #self.addDockWidget(Qt.LeftDockWidgetArea, self.appe_dock)
     self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
+    self.addDockWidget(Qt.RightDockWidgetArea, self.appe_dock)
     #self.tabifyDockWidget(self.label_dock, self.flag_dock)
     
     # Actions
@@ -357,10 +357,11 @@ class MainWindow(QtWidgets.QMainWindow):
       tip=self.tr(u"Change display language"),
     )
 
-    reloadConfiguration = action(
-      text=self.tr("Reload &Configuration"),
-      slot=self.onReloadConfig,
-      tip=self.tr(u"Reload configuration from configuraton file"),
+    resetConfiguration = action(
+      text=self.tr("Reset &Configuration"),
+      slot=self.onResetConfig,
+      icon="reset",
+      tip=self.tr(u"Reset configuration from configuraton file"),
     )
 
     close = action(
@@ -830,7 +831,7 @@ class MainWindow(QtWidgets.QMainWindow):
       (
         changeOutputDir,
         changeLanguage,
-        reloadConfiguration,
+        resetConfiguration,
       ),
     )
 
@@ -838,7 +839,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.menus.view,
       (
         #self.file_dock.toggleViewAction(),
-        #self.appe_dock.toggleViewAction(),
+        self.appe_dock.toggleViewAction(),
         #self.flag_dock.toggleViewAction(),
         self.label_dock.toggleViewAction(),
         #self.annotator_dock.toggleViewAction(),
@@ -1592,6 +1593,15 @@ class MainWindow(QtWidgets.QMainWindow):
     self.zoomMode = self.FIT_WIDTH if value else self.MANUAL_ZOOM
     self.adjustScale()
 
+  def onAppearanceChangedCallback(self, brightness=1, contrast=1):
+    img = utils.img_data_to_pil(self.imageData)
+    img = ImageEnhance.Brightness(img).enhance(brightness)
+    img = ImageEnhance.Contrast(img).enhance(contrast)
+      
+    img_data = utils.img_pil_to_data(img)
+    qimage = QtGui.QImage.fromData(img_data)
+    self.canvas.loadPixmap(QtGui.QPixmap.fromImage(qimage))
+
   # def onAppearanceChangedCallback(self, brightness=1, contrast=1, show_pixelmap=None, show_groundtruth=None):
   #   if show_groundtruth is not None:
   #     self.canvas.show_groundtruth = show_groundtruth
@@ -1620,7 +1630,10 @@ class MainWindow(QtWidgets.QMainWindow):
     label_file = self.getLabelFile(imagename)
 
     try:
-      labelFile = LabelFile(label_file)
+      g = gdal.Open(imagename)
+      geo_transfrom =  g.GetGeoTransform()
+      labelFile = LabelFileGeo(label_file, geo_transfrom, self._config["geo"])
+      imagePath = imagename
     except LabelFileError as e:
       self.errorMessage(
         self.tr("Error opening file"),
@@ -1639,7 +1652,7 @@ class MainWindow(QtWidgets.QMainWindow):
       )
   
     if labelFile.imageData is None:
-      labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+      labelFile.imageData = LabelFileGeo.load_image_file(imagename, self._config["tiff_real_bitdepth"])
       imagePath = imagename
     
     return labelFile, imagePath
@@ -1650,7 +1663,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = None
       try:
-        labelFile = LabelFile(label_file)
+        labelFile = LabelFileGeo(label_file)
       except LabelFileError as e:
         self.errorMessage(
           self.tr("Error opening file"),
@@ -1694,16 +1707,9 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file_without_path = osp.basename(label_file)
       label_file = osp.join(self.output_dir, label_file_without_path)
     
-    if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
-    #   self.labelFile, self.imagePath = self.load_labelfile(label_file)
-    # elif QtCore.QFile.exists(osp.splitext(filename)[0] + ".geojson"):
-      geo = geopandas.read_file(osp.splitext(filename)[0] + ".geojson", encoding='cp949')
-      geo = geo._to_geo(na="null", show_bbox=False)
-      
-      g = gdal.Open(filename)
-      geo_transfrom =  g.GetGeoTransform()
-      self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
-      self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
+    if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
+      self.labelFile, self.imagePath = self.load_labelfile(filename)
+      self.labelFile.imageData = LabelFileGeo.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.labelFile.filename = label_file
       self.labelFile.imagePath = filename
       self.imagePath = filename
@@ -1723,7 +1729,7 @@ class MainWindow(QtWidgets.QMainWindow):
     #   self.imagePath = filename
     #   geolabel = True
     else:
-      self.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
+      self.imageData = LabelFileGeo.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.imagePath = filename
 
     if self.labelFile:
@@ -1775,21 +1781,17 @@ class MainWindow(QtWidgets.QMainWindow):
     else:
       self.setClean()
 
-    # # set brightness constrast values
-    # brightness = self.appearance_widget.slider_brightness.value() / 50;
-    # contrast = self.appearance_widget.slider_contrast.value() / 50
-    #self.onAppearanceChangedCallback()
-    img = utils.img_data_to_pil(self.imageData)
-    img_data = utils.img_pil_to_data(img)
-    qimage = QtGui.QImage.fromData(img_data)
-    self.canvas.loadPixmap(QtGui.QPixmap.fromImage(qimage))
+    # set brightness constrast values
+    brightness = self.appearance_widget.slider_brightness.value() / 50;
+    contrast = self.appearance_widget.slider_contrast.value() / 50
+    self.onAppearanceChangedCallback()
     self.canvas.setEnabled(True)
 
     # if len(self.canvas.annotations) > 0:
     #   self.menus.export_.setEnabled(True)
 
-    # self.appearance_widget.setAnnotations(self.canvas.annotations)
-    # self.appearance_widget.setEnabled(True)
+    self.appearance_widget.setAnnotations(self.canvas.annotations)
+    self.appearance_widget.setEnabled(True)
 
     # set zoom values
     is_initial_load = not self.zoom_values
@@ -1873,13 +1875,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def closeEvent(self, event):
     if not self.mayContinue():      event.ignore()
-    self.settings.setValue(
-      "filename", self.filename if self.filename else ""
-    )
-    self.settings.setValue("window/size", self.size())
-    self.settings.setValue("window/position", self.pos())
-    self.settings.setValue("window/state", self.saveState())
-    self.settings.setValue("recentFiles", self.recentFiles)
+
+    if not self.resetConfig:
+      self.settings.setValue(
+        "filename", self.filename if self.filename else ""
+      )
+      self.settings.setValue("window/size", self.size())
+      self.settings.setValue("window/position", self.pos())
+      self.settings.setValue("window/state", self.saveState())
+      self.settings.setValue("recentFiles", self.recentFiles)
     # ask the use for where to save the labels
     # self.settings.setValue('window/geometry', self.saveGeometry())
 
@@ -1927,6 +1931,7 @@ class MainWindow(QtWidgets.QMainWindow):
       filename = self.imageList[currIndex - 1]
       if filename:
         self.loadFile(filename)
+        self.openPrevImg()
 
     self._config["keep_prev"] = keep_prev
 
@@ -1956,6 +1961,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.filename = filename
     if self.filename and load:
       self.loadFile(self.filename)
+      if not len(self.labelFile.annotations) > 0:
+        self.openNextImg()
 
     self._config["keep_prev"] = keep_prev
 
@@ -2000,7 +2007,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def saveFileDialog(self):
     caption = self.tr("%s - Choose File") % __appname__
-    filters = self.tr("Label files (*%s)") % LabelFile.suffix
+    filters = self.tr("Label files (*%s)") % LabelFileGeo.suffix
     if self.output_dir:
       dlg = QtWidgets.QFileDialog(
         self, caption, self.output_dir, filters
@@ -2009,24 +2016,24 @@ class MainWindow(QtWidgets.QMainWindow):
       dlg = QtWidgets.QFileDialog(
         self, caption, self.currentPath(), filters
       )
-    dlg.setDefaultSuffix(LabelFile.suffix[1:])
+    dlg.setDefaultSuffix(LabelFileGeo.suffix[1:])
     dlg.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
     dlg.setOption(QtWidgets.QFileDialog.DontConfirmOverwrite, False)
     dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog, False)
     basename = osp.basename(osp.splitext(self.filename)[0])
     if self.output_dir:
       default_label_file = osp.join(
-        self.output_dir, basename + LabelFile.suffix
+        self.output_dir, basename + LabelFileGeo.suffix
       )
     else:
       default_label_file = osp.join(
-        self.currentPath(), basename + LabelFile.suffix
+        self.currentPath(), basename + LabelFileGeo.suffix
       )
     filename = dlg.getSaveFileName(
       self,
       self.tr("Choose File"),
       default_label_file,
-      self.tr("Label files (*%s)") % LabelFile.suffix,
+      self.tr("Label files (*%s)") % LabelFileGeo.suffix,
     )
     if isinstance(filename, tuple):
       filename, _ = filename
@@ -2131,14 +2138,15 @@ class MainWindow(QtWidgets.QMainWindow):
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + languages.index(language))
 
   @Slot()
-  def onReloadConfig(self):
+  def onResetConfig(self):
     mb = QtWidgets.QMessageBox
     msg = self.tr(
-      "Discard all changes in memory and reload everthing from file,"
+      "Discard all changes in memory and reload everthing from file, "
       "proceed anyway?"
     )
     answer = mb.warning(self, self.tr("Attention"), msg, mb.Yes | mb.No)
     if not answer == mb.Yes:      return
+    self.resetConfig = True
     QtWidgets.QApplication.exit(MainWindow.RESTART_CODE + MainWindow.RESET_CONFIG)
 
   # @Slot()
@@ -2565,15 +2573,6 @@ class MainWindow(QtWidgets.QMainWindow):
   #     with open(out_ann_file, "w") as f:
   #       json.dump(data, f)
   
-  # [temperally-code] load GT images
-  @property
-  def GTimageList(self):
-    list = []
-    for i in range(self.fileListWidget.count()):
-      item = self.fileListWidget.item(i)
-      list.append(osp.join(self.lastOpenDir, "../GT", item.text()))
-    return list
-
   # def onEvalAI(self):
   #   if not self.actions.evalAuto.isChecked():
   #     self.appearance_widget.setEnabledEval(False)
@@ -2753,7 +2752,7 @@ class MainWindow(QtWidgets.QMainWindow):
         label_file = osp.join(self.output_dir, label_file_without_path)
       item = QtWidgets.QListWidgetItem(osp.basename(file))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
+      if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
         item.setCheckState(Qt.Checked)
       else:
         item.setCheckState(Qt.Unchecked)
@@ -2789,7 +2788,7 @@ class MainWindow(QtWidgets.QMainWindow):
         label_file = osp.join(self.output_dir, label_file_without_path)
       item = QtWidgets.QListWidgetItem(osp.basename(filename))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
+      if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
         item.setCheckState(Qt.Checked)
       else:
         item.setCheckState(Qt.Unchecked)

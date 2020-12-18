@@ -206,6 +206,7 @@ def main():
       win.close()
 
     elif returncode - MainWindow.RESTART_CODE == MainWindow.RESET_CONFIG:
+      os.remove(osp.join(osp.expanduser("~"), ".mindATrc"))
       config = get_default_config(True)
       win.close()
 

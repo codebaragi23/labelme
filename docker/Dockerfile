@@ -10,8 +10,7 @@ RUN \
   apt-get update -qq && \
   apt-get install -qq -y \
     libgl1-mesa-glx \
-    python3-pyqt5 \
-    python3-gdal \
+    libgdal-dev
   && rm -rf /var/lib/apt/lists/*
 
 RUN /bin/bash install_korean-language.sh

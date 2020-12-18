@@ -1,6 +1,6 @@
 # -*- mode: python -*-
 # vim: ft=python
-
+from PyInstaller.utils.hooks import collect_data_files
 import sys
 
 
@@ -11,12 +11,11 @@ a = Analysis(
   ['mindAT/__main__.py'],
   pathex=['mindAT', '/usr/lib/python3.6/dist-packages/cv2/python-3.6', '/usr/share/gdal/2.2/'],
   binaries=[],
-  datas=[
+  datas=collect_data_files('geopandas', subdir='datasets') + [
     ('mindAT/config/default_config.yaml', 'mindAT/config'),
-    ('mindAT/icons/*', 'mindAT/icons',),
-    ('mindAT/translate/*', 'mindAT/translate',),
-  ],
-  hiddenimports=[],
+    ('mindAT/icons/*', 'mindAT/icons'),
+    ('mindAT/translate/*.qm','mindAT/translate')],
+  hiddenimports=['affine', 'pyproj._compat', 'fiona._shim', 'fiona.schema'],
   hookspath=[],
   runtime_hooks=[],
   excludes=[],
