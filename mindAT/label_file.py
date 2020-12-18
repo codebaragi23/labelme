@@ -36,7 +36,7 @@ def open(name, mode):
 class LabelFileError(Exception):
   pass
 
-class LabelFileGeo(object):
+class LabelFile(object):
   suffix = ".geojson"
 
   def __init__(self, filename=None, geo_transfrom=None, config=None):
@@ -203,4 +203,4 @@ class LabelFileGeo(object):
 
   @staticmethod
   def is_label_file(filename):
-    return osp.splitext(filename)[1].lower() == LabelFileGeo.suffix
+    return osp.splitext(filename)[1].lower() == LabelFile.suffix
