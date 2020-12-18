@@ -63,7 +63,7 @@ def main():
     for filename in glob.glob(osp.join(args.input_dir, "*.json")):
         print("Generating dataset from:", filename)
 
-        label_file = mindAT.LabelFileGeo(filename=filename)
+        label_file = mindAT.LabelFile(filename=filename)
 
         base = osp.splitext(osp.basename(filename))[0]
         out_img_file = osp.join(args.output_dir, "JPEGImages", base + ".jpg")
