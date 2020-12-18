@@ -19,3 +19,17 @@ GDAL-3.1.3-cp36-cp36m-win_amd64.whl
 geopandas-0.8.1-py3-none-any.whl
 Shapely-1.7.1-cp36-cp36m-win_amd64.whl
 examples/evaluation/nara/2011_000003.jpg_gt.jpg
+*.tif
+*.png
+mindAT/deepLab/dataset/test/test.txt
+mindAT/deepLab/dataset/train/train.txt
+mindAT/deepLab/weight/model.ckpt-78064.data-00000-of-00001
+mindAT/deepLab/weight/model.ckpt-78064.index
+mindAT/deepLab/weight/model.ckpt-78064.meta
+mindAT/deepLab/weight/pretrain/eval.graph
+mindAT/deepLab/weight/pretrain/resnet_v2_101.ckpt
+mindAT/deepLab/weight/pretrain/train.graph
+mindAT/deepLab/weight/trained/graph.pbtxt
+mindAT/deepLab/weight/trained/model.ckpt-27192.data-00000-of-00001
+mindAT/deepLab/weight/trained/model.ckpt-27192.index
+mindAT/deepLab/weight/trained/model.ckpt-27192.meta

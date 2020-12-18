@@ -4,6 +4,7 @@ import functools
 import math
 import os
 import os.path as osp
+import io
 import shutil
 import re
 import webbrowser
@@ -2573,12 +2574,26 @@ class MainWindow(QtWidgets.QMainWindow):
     #input
     test_image = utils.img_data_to_arr(self.imageData)
     weight_path = os.path.join(os.path.abspath(os.curdir), 'deepLab/weight/trained')
-    result_path = os.path.join(os.path.abspath(os.curdir), 'deepLab/mindAT_result')
     #inference
     output = task.inference_mindAT(weight_path, test_image, self.filename + "_gt.jpg")
-    # cv2.imwrite(self.filename + "_gt.jpg", output)
-    # task.inference(weight_path, 'E:/Git/MindAt/mindAT/deepLab/dataset/train/ttttt', result_path)
+    output = np.argmax(output, axis=-1)
+    output = np.uint8(output)
 
+    output_img = Image.fromarray(output)
+    output_img.putpalette([
+      100, 100, 100,
+      10, 10, 10,
+      20, 20, 20,
+      30, 30, 30,
+      40, 40, 40,
+      50, 50, 50,
+      60, 60, 60,
+      70, 70, 70,
+      80, 80, 80,
+      90, 90, 90
+    ])
+
+    output_img = utils.img_pil_to_data(output_img)
 
     if len(self.imageList) > 0:
       label_file = osp.join(self.lastOpenDir, "../GT", self.getLabelFile(osp.basename(self.filename)))

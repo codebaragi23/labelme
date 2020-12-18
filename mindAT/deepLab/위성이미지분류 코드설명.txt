@@ -1,0 +1,66 @@
+1. 파일 다운로드
+	201124_tensorflow-deeplab-v3-plus-master_share.zip 파일 (Python 코드/ dataset / weight)
+	다운로드 받아서 각각 적당한 위치에 저장 및 압축 해제
+
+2. 코드 파일
+	api_header.py 파일 : UI 동작을 위한 API들을 정의해 놓은 MAP_TASK 클래스가 정의되어 있음.
+	main.py 파일 : 위 API를 순차적으로 호출하여 사용한 예시 파일
+
+3. API 설명 (코드에 주석 포함)
+  	# // 동작 : 데이터의 image 파일과 label 파일이 들어있는 경로를 각각 입력하면 tfrecord_path에 tfrecord 생성
+	# // image_path = image 파일이 저장된 경로
+	# // label_path = label 파일이 저장된 경로
+	# // tfrecord_path = 생성되는 tfrecord 파일을 저장할 경로
+	# // isTrain : 학습셋이면 True, 테스트셋이면 False 입력
+	# // 한 쌍의 image파일과 label 파일은 서로 다른 경로에 같은 이름을 가지고 있어야 함.
+	# // 예를 들어 image 파일이 c:\dataset\image\0000.tif 이면, label 파일은 c:\dataset\label\0000.tif 이런 식이어야 함.
+	def create_tfrecord(self, image_path, label_path, tfrecord_path, isTrain):
+	
+	# // 동작 : 위에서 생성한 tfrecord를 이용하여 학습 (마지막으로 저장한 weight 파일 경로 return)
+	# // tfrecord_path = tfrecord 저장된 경로
+	# // preweight_file = restore할 초기 weight 파일 (저장 경로 전체 포함)
+	# // weight_path = 학습한 결과 weight 파일을 저장할 경로
+	# // iter_num = 학습 iteration 횟수
+	def train(self, tfrecord_path, preweight_file, weight_save_path , iter_num):
+
+	# // 동작 : 학습한 weight를 이용하여 테스트 셋에 실험함 (pixel accuracy값 리턴)
+	# // weight_save_path = test할 ckpt weight 파일이 저장된 경로
+	# // test_image_path = test할 image 파일이 저장된 경로
+	# // test_label_path = test할 image의 label 파일이 저장된 경로
+	# // tfrecord_path = test할 tfrecord 저장된 경로
+	# // result_path = 실험 결과 수치를 excel 파일로 저장하고, test할 image 파일 각각의 테스트 결과를 image로 저장할 경로
+	def evaluate(self, weight_save_path, test_image_path, test_label_path, tfrecord_path, result_path)
+
+	# // 동작 : 학습한 weight 여러개를 이용하여 테스트 셋에 실험함 (pixel accuracy값 return)
+	# // weight_path_list = test할 ckpt weight 파일이 있는 path들의 list
+	# // test_image_path = test할 image 파일이 저장된 경로
+	# // test_label_path = test할 image의 label 파일이 저장된 경로
+	# // result_path = 실험 결과 수치를 excel 파일로 저장하고, test할 image 파일 각각의 테스트 결과를 image로 저장할 경로
+	def evaluate_ensemble(self, weight_path_list, test_image_path, test_label_path, result_path)
+
+
+4. main.py 파일 설명 (경로 및 설정)
+	# 데이터셋이 저장된 경로
+	data_path = "dataset"
+
+	# 학습시에 restore해서 사용할 weight 파일 경로
+	preweight_path = "weight/pre_weight/resnet_v2_101_4ch.ckpt"
+
+	# 테스트 셋에 대해 evaluate 한 결과(이미지, 엑셀 파일)를 저장할 경로
+	result_path = "result"
+	
+	# 학습 횟수
+	iter_num = 100000
+
+	# 학습할지 여부, False인 경우 아래 weight_path에 저장된 weight로 inference 수행
+	_RUN_TRAIN = True
+
+	# 학습한 weight 파일이 저장된 경로
+	weight_path = "weight/trained"
+
+
+
+5. 기타 사항
+	현재 코드는 입력 데이터셋이 5채널 8비트 tif 이미지 파일이라고 가정함. 그렇지 않은 경우 정상 동작하지 않을 수 있음.
+	tfrecord 변환은 초기에 1회만 수행하고 이후에는 경로에 tfrecord 파일이 없어야만 새로 변환하여 파일 생성함
+	(따라서 중간에 에러가 나서 tfrecord 파일에 문제가 있는 경우에는 직접 삭제하고 다시 시도해야 함)

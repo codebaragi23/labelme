@@ -61,9 +61,9 @@ class LabelFile(object):
         if image.shape[0] == 3:
           image = image.transpose(1,2,0)
 
-        if real_bitdepth > 8:
-          diff_bitdepth = real_bitdepth-8
-          image = (image/(1<<diff_bitdepth)).clip(0, 255)
+        # if real_bitdepth > 8:
+        #   diff_bitdepth = real_bitdepth-8
+        #   image = (image/(1<<diff_bitdepth)).clip(0, 255)
           
         image = image.astype("uint8")
         image_pil = PIL.Image.fromarray(image)
