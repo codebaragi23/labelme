@@ -35,7 +35,7 @@ from mindAT import QT5
 
 from . import utils
 from mindAT.config import get_config
-from mindAT.label_file import LabelFileGeo
+from mindAT.label_file import LabelFile
 from mindAT.label_file import LabelFileError
 from mindAT.logger import logger
 from mindAT.annotation import Annotation
@@ -324,15 +324,15 @@ class MainWindow(QtWidgets.QMainWindow):
     #   enabled=False,
     # )
 
-    saveAuto = action(
-      text=self.tr("Save &Automatically"),
-      #slot=lambda x: self.actions.saveAuto.setChecked(x),
-      icon="save",
-      tip=self.tr("Save automatically"),
-      checkable=True,
-      enabled=True,
-    )
-    saveAuto.setChecked(self._config["auto_save"])
+    # saveAuto = action(
+    #   text=self.tr("Save &Automatically"),
+    #   slot=lambda x: self.actions.saveAuto.setChecked(x),
+    #   icon="save",
+    #   tip=self.tr("Save automatically"),
+    #   checkable=True,
+    #   enabled=True,
+    # )
+    # saveAuto.setChecked(self._config["auto_save"])
 
     # saveWithImageData = action(
     #   text=self.tr("Save With Image Data"),
@@ -342,13 +342,13 @@ class MainWindow(QtWidgets.QMainWindow):
     #   checked=self._config["store_data"],
     # )
 
-    changeOutputDir = action(
-      text=self.tr("Change &Output Dir"),
-      slot=self.onChangeOutputDir,
-      shortcut=shortcuts["save_to"],
-      icon="open",
-      tip=self.tr(u"Change where annotations are loaded/saved"),
-    )
+    # changeOutputDir = action(
+    #   text=self.tr("Change &Output Dir"),
+    #   slot=self.onChangeOutputDir,
+    #   shortcut=shortcuts["save_to"],
+    #   icon="open",
+    #   tip=self.tr(u"Change where annotations are loaded/saved"),
+    # )
     
     changeLanguage = action(
       text=self.tr("Change &Language"),
@@ -358,7 +358,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
 
     resetConfiguration = action(
-      text=self.tr("Reset &Configuration"),
+      text=self.tr("&Reset Configuration"),
       slot=self.onResetConfig,
       icon="reset",
       tip=self.tr(u"Reset configuration from configuraton file"),
@@ -383,7 +383,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     createPolyMode = action(
       text=self.tr("Create Polygons"),
-      slot=lambda: self.onToggleDrawMode(self.actions.createPolyMode),
+      slot=lambda: self.toggleDrawMode(self.actions.createPolyMode),
       shortcut=shortcuts["create_polygon"],
       icon="polygon",
       tip=self.tr("Start drawing polygons"),
@@ -392,7 +392,7 @@ class MainWindow(QtWidgets.QMainWindow):
     )
     # createRectangleMode = action(
     #   text=self.tr("Create Rectangle"),
-    #   slot=lambda: self.onToggleDrawMode(self.actions.createRectangleMode),
+    #   slot=lambda: self.toggleDrawMode(self.actions.createRectangleMode),
     #   shortcut=shortcuts["create_rectangle"],
     #   icon="rectangle",
     #   tip=self.tr("Start drawing rectangles"),
@@ -401,7 +401,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # )
     # createCircleMode = action(
     #   text=self.tr("Create Circle"),
-    #   slot=lambda: self.onToggleDrawMode(self.actions.createCircleMode),
+    #   slot=lambda: self.toggleDrawMode(self.actions.createCircleMode),
     #   shortcut=shortcuts["create_circle"],
     #   icon="circle",
     #   tip=self.tr("Start drawing circles"),
@@ -410,7 +410,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # )
     # createLineMode = action(
     #   text=self.tr("Create Line"),
-    #   slot=lambda: self.onToggleDrawMode(self.actions.createLineMode),
+    #   slot=lambda: self.toggleDrawMode(self.actions.createLineMode),
     #   shortcut=shortcuts["create_line"],
     #   icon="line",
     #   tip=self.tr("Start drawing lines"),
@@ -419,7 +419,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # )
     # createPointMode = action(
     #   text=self.tr("Create Point"),
-    #   slot=lambda: self.onToggleDrawMode(self.actions.createPointMode),
+    #   slot=lambda: self.toggleDrawMode(self.actions.createPointMode),
     #   shortcut=shortcuts["create_point"],
     #   icon="point",
     #   tip=self.tr("Start drawing points"),
@@ -428,7 +428,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # )
     # createLineStripMode = action(
     #   text=self.tr("Create LineStrip"),
-    #   slot=lambda: self.onToggleDrawMode(self.actions.createLineStripMode),
+    #   slot=lambda: self.toggleDrawMode(self.actions.createLineStripMode),
     #   shortcut=shortcuts["create_linestrip"],
     #   icon="line_strip",
     #   tip=self.tr("Start drawing linestrip (Ctrl+LeftClick ends creation)"),
@@ -666,8 +666,8 @@ class MainWindow(QtWidgets.QMainWindow):
     # )
 
     # Lavel list context menu.
-    mindATnu = QtWidgets.QMenu()
-    utils.addActions(mindATnu, (labelEdit, delete))
+    labelMenu = QtWidgets.QMenu()
+    utils.addActions(labelMenu, (labelEdit, delete))
     self.annotList.setContextMenuPolicy(Qt.CustomContextMenu)
     self.annotList.customContextMenuRequested.connect(
       self.popLabelListMenu
@@ -675,9 +675,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # Store actions for further handling.
     self.actions = utils.struct(
-      saveAuto=saveAuto,
+      #saveAuto=saveAuto,
       #saveWithImageData=saveWithImageData,
-      changeOutputDir=changeOutputDir,
+      #changeOutputDir=changeOutputDir,
       save=save,
       #saveAs=saveAs,
       open=open_,
@@ -800,7 +800,7 @@ class MainWindow(QtWidgets.QMainWindow):
       recentFiles=QtWidgets.QMenu(self.tr("Open &Recent")),
       preferences=QtWidgets.QMenu(self.tr("&Preferences")),
       #export_=QtWidgets.QMenu(self.tr("&Export")),
-      labelList=mindATnu,
+      labelList=labelMenu,
     )
     
     utils.addActions(
@@ -814,7 +814,7 @@ class MainWindow(QtWidgets.QMainWindow):
         None,
         save,
         #saveAs,
-        saveAuto,
+        #saveAuto,
         #saveWithImageData,
         None,
         self.menus.preferences,
@@ -829,7 +829,7 @@ class MainWindow(QtWidgets.QMainWindow):
     utils.addActions(
       self.menus.preferences,
       (
-        changeOutputDir,
+        #changeOutputDir,
         changeLanguage,
         resetConfiguration,
       ),
@@ -1091,13 +1091,13 @@ class MainWindow(QtWidgets.QMainWindow):
     utils.addActions(self.menus.edit, self.actions.annotCheckableOperations + self.actions.editMenu)
 
   def setDirty(self):
-    if self._config["auto_save"] or self.actions.saveAuto.isChecked():
-      label_file = self.getLabelFile(self.imagePath)
-      if self.output_dir:
-        label_file_without_path = osp.basename(label_file)
-        label_file = osp.join(self.output_dir, label_file_without_path)
-      self.saveLabels(label_file)
-      return
+    # if self._config["auto_save"] or self.actions.saveAuto.isChecked():
+    #   label_file = self.getLabelFile(self.imagePath)
+    #   if self.output_dir:
+    #     label_file_without_path = osp.basename(label_file)
+    #     label_file = osp.join(self.output_dir, label_file_without_path)
+    #   self.saveLabels(label_file)
+    #   return
     self.dirty = True
     self.actions.save.setEnabled(True)
     self.actions.undo.setEnabled(self.canvas.isAnnotationRestorable)
@@ -1435,7 +1435,7 @@ class MainWindow(QtWidgets.QMainWindow):
       )
       return False
 
-  def onToggleDrawMode(self, toggleAction):
+  def toggleDrawMode(self, toggleAction):
     self.actions.movableMode.setChecked(False)
     edit=True
     createMode=self.action_to_shape[toggleAction]
@@ -1632,7 +1632,7 @@ class MainWindow(QtWidgets.QMainWindow):
     try:
       g = gdal.Open(imagename)
       geo_transfrom =  g.GetGeoTransform()
-      labelFile = LabelFileGeo(label_file, geo_transfrom, self._config["geo"])
+      labelFile = LabelFile(label_file, geo_transfrom, self._config["geo"])
       imagePath = imagename
     except LabelFileError as e:
       self.errorMessage(
@@ -1652,7 +1652,7 @@ class MainWindow(QtWidgets.QMainWindow):
       )
   
     if labelFile.imageData is None:
-      labelFile.imageData = LabelFileGeo.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+      labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
       imagePath = imagename
     
     return labelFile, imagePath
@@ -1663,7 +1663,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = None
       try:
-        labelFile = LabelFileGeo(label_file)
+        labelFile = LabelFile(label_file)
       except LabelFileError as e:
         self.errorMessage(
           self.tr("Error opening file"),
@@ -1707,9 +1707,9 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file_without_path = osp.basename(label_file)
       label_file = osp.join(self.output_dir, label_file_without_path)
     
-    if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
+    if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
       self.labelFile, self.imagePath = self.load_labelfile(filename)
-      self.labelFile.imageData = LabelFileGeo.load_image_file(filename, self._config["tiff_real_bitdepth"])
+      self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.labelFile.filename = label_file
       self.labelFile.imagePath = filename
       self.imagePath = filename
@@ -1729,7 +1729,7 @@ class MainWindow(QtWidgets.QMainWindow):
     #   self.imagePath = filename
     #   geolabel = True
     else:
-      self.imageData = LabelFileGeo.load_image_file(filename, self._config["tiff_real_bitdepth"])
+      self.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
       self.imagePath = filename
 
     if self.labelFile:
@@ -1876,7 +1876,11 @@ class MainWindow(QtWidgets.QMainWindow):
   def closeEvent(self, event):
     if not self.mayContinue():      event.ignore()
 
-    if not self.resetConfig:
+    if self.resetConfig:
+      fname = self.settings.fileName()
+      if osp.exists(fname):        os.remove(fname)
+      self.resetConfig = False
+    else:
       self.settings.setValue(
         "filename", self.filename if self.filename else ""
       )
@@ -1931,7 +1935,8 @@ class MainWindow(QtWidgets.QMainWindow):
       filename = self.imageList[currIndex - 1]
       if filename:
         self.loadFile(filename)
-        self.openPrevImg()
+        if not self.labelFile or not len(self.labelFile.annotations) > 0:
+          self.openPrevImg()
 
     self._config["keep_prev"] = keep_prev
 
@@ -1961,7 +1966,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.filename = filename
     if self.filename and load:
       self.loadFile(self.filename)
-      if not len(self.labelFile.annotations) > 0:
+      if not self.labelFile or not len(self.labelFile.annotations) > 0:
         self.openNextImg()
 
     self._config["keep_prev"] = keep_prev
@@ -2007,7 +2012,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def saveFileDialog(self):
     caption = self.tr("%s - Choose File") % __appname__
-    filters = self.tr("Label files (*%s)") % LabelFileGeo.suffix
+    filters = self.tr("Label files (*%s)") % LabelFile.suffix
     if self.output_dir:
       dlg = QtWidgets.QFileDialog(
         self, caption, self.output_dir, filters
@@ -2016,24 +2021,24 @@ class MainWindow(QtWidgets.QMainWindow):
       dlg = QtWidgets.QFileDialog(
         self, caption, self.currentPath(), filters
       )
-    dlg.setDefaultSuffix(LabelFileGeo.suffix[1:])
+    dlg.setDefaultSuffix(LabelFile.suffix[1:])
     dlg.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
     dlg.setOption(QtWidgets.QFileDialog.DontConfirmOverwrite, False)
     dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog, False)
     basename = osp.basename(osp.splitext(self.filename)[0])
     if self.output_dir:
       default_label_file = osp.join(
-        self.output_dir, basename + LabelFileGeo.suffix
+        self.output_dir, basename + LabelFile.suffix
       )
     else:
       default_label_file = osp.join(
-        self.currentPath(), basename + LabelFileGeo.suffix
+        self.currentPath(), basename + LabelFile.suffix
       )
     filename = dlg.getSaveFileName(
       self,
       self.tr("Choose File"),
       default_label_file,
-      self.tr("Label files (*%s)") % LabelFileGeo.suffix,
+      self.tr("Label files (*%s)") % LabelFile.suffix,
     )
     if isinstance(filename, tuple):
       filename, _ = filename
@@ -2081,41 +2086,41 @@ class MainWindow(QtWidgets.QMainWindow):
 
   #     self.resetState()
 
-  @Slot()
-  def onChangeOutputDir(self, _value=False):
-    default_output_dir = self.output_dir
-    if default_output_dir is None and self.filename:
-      default_output_dir = osp.dirname(self.filename)
-    if default_output_dir is None:
-      default_output_dir = self.currentPath()
+  # @Slot()
+  # def onChangeOutputDir(self, _value=False):
+  #   default_output_dir = self.output_dir
+  #   if default_output_dir is None and self.filename:
+  #     default_output_dir = osp.dirname(self.filename)
+  #   if default_output_dir is None:
+  #     default_output_dir = self.currentPath()
 
-    output_dir = QtWidgets.QFileDialog.getExistingDirectory(
-      self,
-      self.tr("%s - Save/Load Annotations in Directory") % __appname__,
-      default_output_dir,
-      QtWidgets.QFileDialog.ShowDirsOnly
-      | QtWidgets.QFileDialog.DontResolveSymlinks,
-    )
-    output_dir = str(output_dir)
+  #   output_dir = QtWidgets.QFileDialog.getExistingDirectory(
+  #     self,
+  #     self.tr("%s - Save/Load Annotations in Directory") % __appname__,
+  #     default_output_dir,
+  #     QtWidgets.QFileDialog.ShowDirsOnly
+  #     | QtWidgets.QFileDialog.DontResolveSymlinks,
+  #   )
+  #   output_dir = str(output_dir)
 
-    if not output_dir:   return
+  #   if not output_dir:   return
 
-    self.output_dir = output_dir
-    self.statusBar().showMessage(
-      self.tr("%s - Annotations will be saved/loaded in %s")
-      % (__appname__, self.output_dir)
-    )
-    self.statusBar().show()
+  #   self.output_dir = output_dir
+  #   self.statusBar().showMessage(
+  #     self.tr("%s - Annotations will be saved/loaded in %s")
+  #     % (__appname__, self.output_dir)
+  #   )
+  #   self.statusBar().show()
 
-    current_filename = self.filename
-    self.importDirImages(self.lastOpenDir, load=False)
+  #   current_filename = self.filename
+  #   self.importDirImages(self.lastOpenDir, load=False)
 
-    if current_filename in self.imageList:
-      # retain currently selected file
-      self.fileListWidget.setCurrentRow(
-        self.imageList.index(current_filename)
-      )
-      self.fileListWidget.repaint()
+  #   if current_filename in self.imageList:
+  #     # retain currently selected file
+  #     self.fileListWidget.setCurrentRow(
+  #       self.imageList.index(current_filename)
+  #     )
+  #     self.fileListWidget.repaint()
 
   @Slot()
   def onChangeLanguage(self):
@@ -2752,7 +2757,7 @@ class MainWindow(QtWidgets.QMainWindow):
         label_file = osp.join(self.output_dir, label_file_without_path)
       item = QtWidgets.QListWidgetItem(osp.basename(file))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-      if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
+      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
         item.setCheckState(Qt.Checked)
       else:
         item.setCheckState(Qt.Unchecked)
@@ -2788,7 +2793,7 @@ class MainWindow(QtWidgets.QMainWindow):
         label_file = osp.join(self.output_dir, label_file_without_path)
       item = QtWidgets.QListWidgetItem(osp.basename(filename))
       item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-      if QtCore.QFile.exists(label_file) and LabelFileGeo.is_label_file(label_file):
+      if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
         item.setCheckState(Qt.Checked)
       else:
         item.setCheckState(Qt.Unchecked)

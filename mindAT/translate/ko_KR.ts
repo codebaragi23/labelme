@@ -218,8 +218,8 @@
     </message>
     <message>
         <location filename="../app.py" line="354"/>
-        <source>Reset &amp;Configuration</source>
-        <translation>환경 복구</translation>
+        <source>&amp;Reset Configuration</source>
+        <translation>환경 복구(&amp;R)</translation>
     </message>
     <message>
         <location filename="../app.py" line="354"/>
