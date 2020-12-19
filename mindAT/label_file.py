@@ -111,12 +111,25 @@ class LabelFile(object):
       annotations = []
       for feature in data["features"]:
         if feature["geometry"][self.shape_type_name].lower() == "multipolygon":
-          multilen = len(feature["geometry"]["coordinates"])
-          for i in range(multilen-1):
+          multilen = len(feature["geometry"]["coordinates"][0])
+          annot = dict(
+            label=str(feature["properties"][self.label_name]),
+            shape_type="polygon",
+            points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][0][0]],
+            
+            flags={},
+            group_id=None,
+            other_data={
+              k:v for k, v in feature["properties"].items() if k not in annotation_keys
+            },
+          )
+          annotations.append(annot)
+
+          for i in range(1, multilen, 2):
             annot = dict(
-              label=str(feature["properties"][self.label_name]),
+              label="_background_",
               shape_type="polygon",
-              points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][i][0]],
+              points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][0][i]],
               
               flags={},
               group_id=None,
@@ -126,17 +139,6 @@ class LabelFile(object):
             )
             annotations.append(annot)
 
-          annot = dict(
-            label=str(feature["properties"][self.label_name]),
-            shape_type="polygon",
-            points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
-
-            flags={},
-            group_id=None,
-            other_data={
-              k:v for k, v in feature["properties"].items() if k not in annotation_keys
-            },
-          )
         else:
           annot = dict(
             label=str(feature["properties"][self.label_name]),
@@ -149,7 +151,7 @@ class LabelFile(object):
               k:v for k, v in feature["properties"].items() if k not in annotation_keys
             },
           )
-        annotations.append(annot)
+          annotations.append(annot)
     
     except Exception as e:
       raise LabelFileError(e)
