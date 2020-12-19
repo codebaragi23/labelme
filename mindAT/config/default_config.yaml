@@ -20,7 +20,7 @@ annotation_color: auto  # null, 'auto', 'manual'
 shift_auto_annotation_color: 0
 label_colors: null
 
-tiff_real_bitdepth: 8
+tiff_real_bitdepth: 11
 
 # geo-json configuration
 geo:

@@ -1,16 +1,18 @@
 import base64
 import contextlib
+from ctypes import c_uint8
 import io
 import json
 import os.path as osp
 
-import cv2
-import PIL.Image
-import tifffile
-import geopandas
 
 import affine
 import copy
+import geopandas
+
+import cv2
+from tifffile import TiffFile
+from PIL import Image
 
 from mindAT import __version__
 from mindAT.logger import logger
@@ -18,7 +20,7 @@ from mindAT import PY2
 from mindAT import QT4
 from mindAT import utils
 
-PIL.Image.MAX_IMAGE_PIXELS = None
+Image.MAX_IMAGE_PIXELS = None
 
 
 @contextlib.contextmanager
@@ -56,20 +58,29 @@ class LabelFile(object):
     import numpy as np
     try:
       if ext in [".tif", ".tiff"]:
-        image = tifffile.imread(filename)
+        with TiffFile(filename) as tif:
+          image = tif.asarray()
+
+        if len(image.shape) < 3:
+          image_pil = Image.open(filename)
+          image_pil = image_pil.convert("RGB")
 
         #농업
-        if image.shape[0] == 3:
-          image = image.transpose(1,2,0)
+        else:
+          if image.shape[-1] != 3:
+            image = image.transpose(1,2,0)
 
-        if real_bitdepth > 8:
-          diff_bitdepth = real_bitdepth-8
-          image = (image/(1<<diff_bitdepth)).clip(0, 255)
-          
-        image = image.astype("uint8")
-        image_pil = PIL.Image.fromarray(image)
+          if image.dtype != 'uint8' and real_bitdepth > 8:
+            diff_bitdepth = real_bitdepth-8
+            image = (image/(1<<diff_bitdepth)).clip(0, 255)
+            image = image.astype("uint8")
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            
+          image_pil = Image.fromarray(image)
       else:
-        image_pil = PIL.Image.open(filename)
+        image_pil = Image.open(filename)
+        
+      image_pil = image_pil.convert("RGB")
 
     except IOError:
       logger.error("Failed opening image file: {}".format(filename))
