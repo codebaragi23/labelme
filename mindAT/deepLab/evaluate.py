@@ -256,7 +256,7 @@ def calc_result_excel(result_path, test_label_path, each_file_result=True):
 
 	return accuracy
 
-def inference_mindAT(weight_path, test_image, file_name, gpu_id):
+def inference_mindAT(sess, predictions, placeholder, image_ori, file_name, gpu_id=None):
 	'''
 
 	:param weight_path: path of weight
@@ -264,38 +264,36 @@ def inference_mindAT(weight_path, test_image, file_name, gpu_id):
 	:param gpu_id:
 	:return vote: numpy array of image
 	'''
-	print("inference, weight_path = {}".format(weight_path))
 
 	# os.makedirs(result_path, exist_ok=True)
 	if gpu_id != None:
 		os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-	x = tf.placeholder(tf.float32, [1, PATCH_SIZE, PATCH_SIZE, DEPTH])
+	# x = tf.placeholder(tf.float32, [1, PATCH_SIZE, PATCH_SIZE, DEPTH])
 
-	predictions = deeplab_model.deeplabv3_plus_model_fn(
-		x,
-		None,
-		tf.estimator.ModeKeys.PREDICT,
-		params={
-			'output_stride': output_stride,
-			'batch_size': 1,  # Batch size must be 1 because the images' size may differ
-			'base_architecture': base_architecture,
-			'pre_trained_model': None,
-			'batch_norm_decay': None,
-			'num_classes': NUM_CLASSES,
-			'freeze_batch_norm': True,
-			'num_channels': DEPTH
-		}
-	).predictions
+	# predictions = deeplab_model.deeplabv3_plus_model_fn(
+	# 	x,
+	# 	None,
+	# 	tf.estimator.ModeKeys.PREDICT,
+	# 	params={
+	# 		'output_stride': output_stride,
+	# 		'batch_size': 1,  # Batch size must be 1 because the images' size may differ
+	# 		'base_architecture': base_architecture,
+	# 		'pre_trained_model': None,
+	# 		'batch_norm_decay': None,
+	# 		'num_classes': NUM_CLASSES,
+	# 		'freeze_batch_norm': True,
+	# 		'num_channels': DEPTH
+	# 	}
+	# ).predictions
 
-	saver = tf.train.Saver()
-	ckpt = tf.train.get_checkpoint_state(weight_path)
+	# saver = tf.train.Saver()
+	# ckpt = tf.train.get_checkpoint_state(weight_path)
 
 	# os.makedirs(result_path, exist_ok=True)
 	# files = os.listdir(test_image_path)
 	# for filename in files:
 	# image_path = os.path.join(test_image_path, filename)
-	image_ori = test_image
 
 	row_ori = image_ori.shape[0]
 	col_ori = image_ori.shape[1]
@@ -327,27 +325,27 @@ def inference_mindAT(weight_path, test_image, file_name, gpu_id):
 	col = image.shape[1]
 	# vote_each = np.zeros((row, col, NUM_CLASSES))
 
-	with tf.Session() as sess:
-		saver.restore(sess, ckpt.model_checkpoint_path)
+# with tf.Session() as sess:
+	# saver.restore(sess, ckpt.model_checkpoint_path)
 
-		row_list = list(range(0, row - PATCH_SIZE, int(PATCH_SIZE / 2)))
-		row_list.append(row - PATCH_SIZE)
-		col_list = list(range(0, col - PATCH_SIZE, int(PATCH_SIZE / 2)))
-		col_list.append(col - PATCH_SIZE)
+	row_list = list(range(0, row - PATCH_SIZE, int(PATCH_SIZE / 2)))
+	row_list.append(row - PATCH_SIZE)
+	col_list = list(range(0, col - PATCH_SIZE, int(PATCH_SIZE / 2)))
+	col_list.append(col - PATCH_SIZE)
 
-		for r in row_list:
-			for c in col_list:
-				r_off = 0
-				c_off = 0
+	for r in row_list:
+		for c in col_list:
+			r_off = 0
+			c_off = 0
 
-				sub_image = image[r + r_off:r + PATCH_SIZE + r_off, c + c_off:c + PATCH_SIZE + c_off, :]
-				sub_image = np.reshape(sub_image, [1, PATCH_SIZE, PATCH_SIZE, DEPTH])
+			sub_image = image[r + r_off:r + PATCH_SIZE + r_off, c + c_off:c + PATCH_SIZE + c_off, :]
+			sub_image = np.reshape(sub_image, [1, PATCH_SIZE, PATCH_SIZE, DEPTH])
 
-				preds = sess.run(predictions, feed_dict={x: sub_image})
-				pred_prob = preds['probabilities']
-				crop_result = np.reshape(pred_prob, (PATCH_SIZE, PATCH_SIZE, NUM_CLASSES))
-				vote[r + r_off:r + PATCH_SIZE + r_off, c + c_off:c + PATCH_SIZE + c_off] += crop_result
-	sess.close()
+			preds = sess.run(predictions, feed_dict={placeholder: sub_image})
+			pred_prob = preds['probabilities']
+			crop_result = np.reshape(pred_prob, (PATCH_SIZE, PATCH_SIZE, NUM_CLASSES))
+			vote[r + r_off:r + PATCH_SIZE + r_off, c + c_off:c + PATCH_SIZE + c_off] += crop_result
+# sess.close()
 
 	return vote
 

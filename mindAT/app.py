@@ -53,7 +53,11 @@ from mindAT.widgets import LabelQListWidget
 from mindAT.widgets import ZoomWidget
 from mindAT.widgets import QJsonTreeWidget
 
+import tensorflow as tf
+from mindAT.deepLab import deeplab_model
+from mindAT.deepLab.utils import preprocessing, dataset_util
 from mindAT.deepLab.api_header import MAP_TASK
+from mindAT.deepLab.config import *
 # 클래스 초기화
 task = MAP_TASK()
 
@@ -1073,6 +1077,34 @@ class MainWindow(QtWidgets.QMainWindow):
     # if self.firstStart:
     #  QWhatsThis.enterWhatsThisMode()
 
+    # load ckpt, session for inference DeepLab V3+ segmentation
+    # load predictions
+    self.DeepLabPlaceHolder = tf.placeholder(tf.float32, [1, PATCH_SIZE, PATCH_SIZE, DEPTH])
+    self.DeepLabPredictions = deeplab_model.deeplabv3_plus_model_fn(
+      self.DeepLabPlaceHolder,
+      None,
+      tf.estimator.ModeKeys.PREDICT,
+      params={
+        'output_stride': output_stride,
+        'batch_size': 1,  # Batch size must be 1 because the images' size may differ
+        'base_architecture': base_architecture,
+        'pre_trained_model': None,
+        'batch_norm_decay': None,
+        'num_classes': NUM_CLASSES,
+        'freeze_batch_norm': True,
+        'num_channels': DEPTH
+      }
+    ).predictions
+
+    #load ckpt
+    weight_path = os.path.join(os.path.abspath(os.getcwd()), 'deepLab/weight/trained')
+    saver = tf.train.Saver()
+    ckpt = tf.train.get_checkpoint_state(weight_path)
+
+    # load session
+    self.deepLabSession = tf.Session()
+    saver.restore(self.deepLabSession, ckpt.model_checkpoint_path)
+
   def menu(self, title, actions=None):
     menu = self.menuBar().addMenu(title)
     if actions:
@@ -1869,6 +1901,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.settings.setValue("recentFiles", self.recentFiles)
     # ask the use for where to save the labels
     # self.settings.setValue('window/geometry', self.saveGeometry())
+    self.deepLabSession.close()
 
   def dragEnterEvent(self, event):
     extensions = [
@@ -2573,9 +2606,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #input
     test_image = utils.img_data_to_arr(self.imageData)
-    weight_path = os.path.join(os.path.abspath(os.curdir), 'deepLab/weight/trained')
+
     #inference
-    output = task.inference_mindAT(weight_path, test_image, self.filename + "_gt.jpg")
+    output = task.inference_mindAT(self.deepLabSession, self.DeepLabPredictions, self.DeepLabPlaceHolder, test_image, self.filename + "_gt.jpg")
     output = np.argmax(output, axis=-1)
     output = np.uint8(output)
 

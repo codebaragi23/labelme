@@ -88,5 +88,5 @@ class MAP_TASK():
 	# // 동작 : 학습한 weight를 이용하여 image inference 수행
 	# // weight_path = test할 ckpt weight 파일이 있는 path
 	# // test_image = inference할 image numpy array
-	def inference_mindAT(self, weight_path, test_image, file_name, gpu_id=None):
-		return evaluate.inference_mindAT(weight_path, test_image, file_name, gpu_id)
+	def inference_mindAT(self, sess, placeholder, image_ori, file_name, gpu_id=None):
+		return evaluate.inference_mindAT(sess, placeholder, image_ori, file_name, gpu_id)
