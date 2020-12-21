@@ -1,0 +1,24 @@
+# pip install -r requirements.txt
+
+# base ----------------------------------------
+setuptools
+wheel
+imgviz>=0.11.0
+opencv-python
+matplotlib
+numpy
+Pillow>=2.8.0
+affine
+PyQt5
+qtpy
+pyside2
+pyyaml
+termcolor
+tifffile
+lxml
+imagecodecs
+colordict
+colorama
+
+# coco ----------------------------------------
+pycocotools>=2.0

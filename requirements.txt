@@ -1,39 +1,41 @@
-# pip install -r requirements.txt
-
-# local ----------------------------------------
-geopandas-0.8.1-py3-none-any.whl
-GDAL-3.1.3-cp36-cp36m-win_amd64.whl
-Fiona-1.8.17-cp36-cp36m-win_amd64.whl
-Shapely-1.7.1-cp36-cp36m-win_amd64.whl
+# pip3 install -r requirements.txt
 
 # base ----------------------------------------
 setuptools
 wheel
 imgviz>=0.11.0
+opencv-python
 matplotlib
-numpy==1.19.3
+numpy
 Pillow>=2.8.0
+affine
 PyQt5
 qtpy
-PyYAML
+pyside2
+pyyaml
 termcolor
 tifffile
 lxml
 imagecodecs
 colordict
-opencv-python==4.4.0.44
-colorama==0.4.4
+colorama
 
-# # Geo ----------------------------------------
-geopandas
-pygeos
-
-# # coco ----------------------------------------
+# coco ----------------------------------------
 pycocotools>=2.0
 
-# export --------------------------------------
-# coremltools==4.0b2
-# onnx>=1.7.0
+# Geo ----------------------------------------
+# if windows then using pipwin install
+# pip install pipwin
+pandas
+shapely
 
-# extras --------------------------------------
-# thop
+# need to next command
+# apt install libgdal-dev
+# export CPLUS_INCLUDE_PATH=/usr/include/gdal
+# export C_INCLUDE_PATH=/usr/include/gdal
+
+gdal
+fiona
+pyproj
+six
+geopandas

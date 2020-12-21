@@ -14,8 +14,6 @@ import numpy as np
 
 # TODO(unknown):
 # - [maybe] Find optimal epsilon value.
-
-
 DEFAULT_TEXT_COLOR = QtGui.QColor(0, 0, 0)
 DEFAULT_TEXT_BACKGROUND_COLOR = QtGui.QColor(128, 128, 128, 156)
 
@@ -36,7 +34,7 @@ class Canvas(QtWidgets.QWidget):
   edgeSelected = QtCore.Signal(bool, object)
   vertexSelected = QtCore.Signal(bool)
 
-  CREATE, EDIT = 0, 1
+  CREATE, EDIT, MOVE = 0, 1, 2
 
   # polygon, rectangle, line, or point
   _createMode = "polygon"
@@ -95,12 +93,6 @@ class Canvas(QtWidgets.QWidget):
     # Set widget options.
     self.setMouseTracking(True)
     self.setFocusPolicy(QtCore.Qt.WheelFocus)
-
-  def fillDrawing(self):
-    return self._fill_drawing
-
-  def setFillDrawing(self, value):
-    self._fill_drawing = value
 
   def setEvalMethod(self, method):
     self.eval_method = method
@@ -167,12 +159,19 @@ class Canvas(QtWidgets.QWidget):
   def editing(self):
     return self.mode == self.EDIT
 
+  def moving(self):
+    return self.mode == self.MOVE
+
   def setEditing(self, value=True):
     self.mode = self.EDIT if value else self.CREATE
     self.cancelDrawing()
     if not value:  # Create
       self.unHighlight()
       self.deSelectAnnotation()
+  
+  def setMoving(self, value=True):
+    self.mode = self.MOVE if value else self.EDIT
+    self.cancelDrawing()
 
   def unHighlight(self):
     if self.hAnnotation:
@@ -212,7 +211,7 @@ class Canvas(QtWidgets.QWidget):
         # Project the point to the pixmap's edges.
         pos = self.intersectionPoint(self.current[-1], pos)
       elif (
-        len(self.current) > 1
+        len(self.current) > 2
         and self.createMode == "polygon"
         and self.closeEnough(pos, self.current[0])
       ):
@@ -259,7 +258,7 @@ class Canvas(QtWidgets.QWidget):
         self.boundedMoveVertex(pos)
         self.repaint()
         self.movingAnnotation = True
-      elif self.selectedAnnotations and self.prevPoint:
+      elif self.moving() and self.selectedAnnotations and self.prevPoint:
         self.overrideCursor(CURSOR_MOVE)
         self.boundedMoveAnnotations(self.selectedAnnotations, pos)
         self.repaint()
@@ -288,7 +287,7 @@ class Canvas(QtWidgets.QWidget):
         self.setStatusTip(self.toolTip())
         self.update()
         break
-      elif annotation.containsPoint(pos):
+      elif self.moving() and annotation.containsPoint(pos):
         if self.selectedVertex():
           self.hAnnotation.highlightClear()
         self.prevhVertex = self.hVertex
@@ -302,8 +301,18 @@ class Canvas(QtWidgets.QWidget):
         self.overrideCursor(CURSOR_GRAB)
         self.update()
         break
+      elif index_edge is not None:
+        if self.selectedVertex():
+          self.hAnnotation.highlightClear()
+        self.prevhVertex = self.hVertex
+        self.hVertex = None
+        self.prevhAnnotation = self.hAnnotation = annotation
+        self.prevhEdge = self.hEdge = index_edge
+        break
+
     else:  # Nothing found, clear highlights, reset state.
       self.unHighlight()
+
     self.edgeSelected.emit(self.hEdge is not None, self.hAnnotation)
     self.vertexSelected.emit(self.hVertex is not None)
 
@@ -454,9 +463,8 @@ class Canvas(QtWidgets.QWidget):
     if (
       self.double_click == "close"
       and self.canCloseAnnotation()
-      and len(self.current) > 3
     ):
-      self.current.popPoint()
+      #self.current.popPoint()
       self.finalise()
 
   def selectAnnotations(self, annotations):
@@ -650,8 +658,7 @@ class Canvas(QtWidgets.QWidget):
         s.paint(p)
 
     if (
-      self.fillDrawing()
-      and self.createMode == "polygon"
+      self.createMode == "polygon"
       and self.current is not None
       and len(self.current.points) >= 2
     ):
@@ -794,7 +801,7 @@ class Canvas(QtWidgets.QWidget):
     self.drawingPolygon.emit(False)
     self.update()
 
-  def cancelCreate(self):
+  def cancelAction(self):
     if self.activeAction and self.activeAction.isChecked():
       self.activeAction.setChecked(False);
       self.setEditing(True)
@@ -802,12 +809,13 @@ class Canvas(QtWidgets.QWidget):
 
   def keyPressEvent(self, event):
     key = event.key()
-    if key == QtCore.Qt.Key_Escape and self.current:
-      self.cancelDrawing()
+    if key == QtCore.Qt.Key_Escape:
+      if self.current:
+        self.cancelDrawing()
+      else:
+        self.cancelAction();
     elif key == QtCore.Qt.Key_Return and self.canCloseAnnotation():
       self.finalise()
-    else:
-      self.cancelCreate();
 
   def setLastLabel(self, text, flags):
     assert text

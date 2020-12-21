@@ -96,15 +96,13 @@ def masks_to_bboxes(masks):
 
 
 def annotation_to_dict(annotation):
-  data = annotation.other_data.copy()
-  data.update(
-    dict(
-      label=annotation.label.encode("utf-8") if PY2 else annotation.label,
-      shape_type=annotation.shape_type,
-      points=[(p.x(), p.y()) for p in annotation.points],
-      group_id=annotation.group_id,
-      flags=annotation.flags,
-    )
+  data = dict(
+    label=annotation.label.encode("utf-8") if PY2 else annotation.label,
+    shape_type=annotation.shape_type,
+    points=[(p.x(), p.y()) for p in annotation.points],
+    group_id=annotation.group_id,
+    flags=annotation.flags,
+    other_data=annotation.other_data,
   )
   return data
 

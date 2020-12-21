@@ -20,12 +20,12 @@ annotation_color: auto  # null, 'auto', 'manual'
 shift_auto_annotation_color: 0
 label_colors: null
 
-tiff_real_bitdepth: 12
+tiff_real_bitdepth: 11
 
 # geo-json configuration
 geo:
-  prop_ann_name: "cropsid"
-  porp_ann_id: null
+  label: "cropsid"
+  id: null
   shape_type: "type"
 
 annotation:
@@ -99,7 +99,7 @@ shortcuts:
   create_line: null
   create_point: null
   create_linestrip: null
-  edit_annotation: Ctrl+A
+  move_annotation: Ctrl+M
   delete_annotation: Delete
   duplicate_annotation: Ctrl+D
   undo: Ctrl+Z
