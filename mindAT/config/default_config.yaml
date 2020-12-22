@@ -15,6 +15,12 @@ file_search: null
 sort_labels: true
 validate_label: null
 
+theme:
+  default: "bluesky"
+  "bluesky":
+    "QMainWindow, QToolBar{color:rgb(0,64,128); background-color:rgb(220,238,248); border:1px solid white; selection-color: blue;}"
+    
+
 default_annotation_color: [0, 255, 0]
 annotation_color: auto  # null, 'auto', 'manual'
 shift_auto_annotation_color: 0
@@ -37,6 +43,73 @@ annotation:
   select_line_color: [255, 255, 255, 255]
   select_fill_color: [0, 255, 0, 155]
   hvertex_fill_color: [255, 255, 255, 255]
+
+labels: {
+  "c1": {
+    "id": [
+      100,
+      100,
+      100,
+    ]
+  },
+  "c2": {
+    "id": [
+      10,
+      10,
+      10,
+    ]
+  },
+  "c3": {
+    "id": [
+      20,
+      20,
+      20,
+    ]
+  },
+  "c4": {
+    "id": [
+      30,
+      30,
+      30
+    ]
+  },
+  "c5": {
+    "id": [
+      40,
+      40,
+      40,
+    ]
+  },
+  "c6": {
+    "id": [
+      50,
+      50,
+      50,
+    ]
+  },
+  "c7": {
+    "id": [
+      60,
+      60,
+      60,
+    ]
+  },
+  "c8": {
+    "id": [
+      70,
+      70,
+      70
+    ]
+  },
+  "c9": {
+    "id": [
+      80,
+      80,
+      80
+    ]
+  },
+}
+
 
 # main
 file_dock:

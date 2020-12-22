@@ -180,6 +180,9 @@ def main():
       get_translator_path(),
     )
     app.installTranslator(translator)
+    if "theme" in config:
+      theme_name = config["theme"]["default"]
+      app.setStyleSheet(config["theme"][theme_name])
 
     win = MainWindow(
       support_languages=list(languages.values()),

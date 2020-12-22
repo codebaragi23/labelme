@@ -41,12 +41,13 @@ class LabelFileError(Exception):
 class LabelFile(object):
   suffix = ".geojson"
 
+  label_indi = "label"
+  shape_type_indi = "shape_type"
+
   def __init__(self, filename=None, geo_transfrom=None, config=None):
     self.annotations = []
     self.imagePath = None
     self.imageData = None
-    self.label_name = config["label"]
-    self.shape_type_name = config["shape_type"]
     if filename is not None and geo_transfrom is not None:
       self.load(filename, geo_transfrom)
     self.filename = filename
@@ -74,7 +75,7 @@ class LabelFile(object):
             diff_bitdepth = real_bitdepth-8
             image = (image/(1<<diff_bitdepth)).clip(0, 255)
             image = image.astype("uint8")
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             
           image_pil = Image.fromarray(image)
       else:
@@ -110,7 +111,7 @@ class LabelFile(object):
       "geometry",
     ]
     annotation_keys = [
-      self.label_name,
+      self.label_indi,
     ]
 
     try:
@@ -121,10 +122,10 @@ class LabelFile(object):
       transform = ~self.transform
       annotations = []
       for feature in data["features"]:
-        if feature["geometry"][self.shape_type_name].lower() == "multipolygon":
+        if feature["geometry"][self.shape_type_indi].lower() == "multipolygon":
           multilen = len(feature["geometry"]["coordinates"][0])
           annot = dict(
-            label=str(feature["properties"][self.label_name]),
+            label=str(feature["properties"][self.label_indi]),
             shape_type="polygon",
             points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][0][0]],
             
@@ -152,8 +153,8 @@ class LabelFile(object):
 
         else:
           annot = dict(
-            label=str(feature["properties"][self.label_name]),
-            shape_type=feature["geometry"][self.shape_type_name].lower(),
+            label=str(feature["properties"][self.label_indi]),
+            shape_type=feature["geometry"][self.shape_type_indi].lower(),
             points=[list(transform*(geox, geoy)) for geox, geoy in feature["geometry"]["coordinates"][0]],
             
             flags={},
@@ -196,7 +197,7 @@ class LabelFile(object):
         type=annot["shape_type"].capitalize(),
         coordinates=[[list(transform*(x, y)) for x, y in annot["points"] ]]
       )
-      properties = dict({self.label_name:annot["label"]})
+      properties = dict({self.label_indi:annot["label"]})
       properties.update(annot["other_data"])
       feature = dict(
         type="Feature",

@@ -1,0 +1,34 @@
+@startuml
+title annotation operation sequence diagram
+
+event -> app : toggleDrawMode(action)
+
+app -> widgets.canvas ++ : activeAction = action
+note over widgets.canvas : set annot mode
+app --> widgets.canvas : setEditing(False)
+app --> widgets.canvas : createMode = 
+app <-- widgets.canvas --
+
+mouse_event -> widgets.canvas ++: mousePressEvent()
+note over widgets.canvas : drawing annotation
+widgets.canvas --> annotation : current = Annotation(...)
+widgets.canvas <-- annotation : 
+widgets.canvas --> annotation : addPoint(pos)
+widgets.canvas <-- annotation
+
+widgets.canvas <- widgets.canvas -- : finalise()
+
+app <- widgets.canvas ++ : newAnnotation.emit()
+
+note over app : add new annotation
+
+app -> label_dialog ++ : labelDialog.popUp()
+app <-- label_dialog -- : text = 
+
+app -> widgets.canvas ++ : setLastLabel(text)
+app <- widgets.canvas -- : annotation
+
+app -> app -- : addLabel(annotation)
+
+
+@enduml

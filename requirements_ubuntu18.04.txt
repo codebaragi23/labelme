@@ -1,41 +1,35 @@
 # pip3 install -r requirements.txt
 
 # base ----------------------------------------
-setuptools
-wheel
 imgviz>=0.11.0
-opencv-python
 matplotlib
 numpy
 Pillow>=2.8.0
 affine
 PyQt5
 qtpy
-pyside2
-pyyaml
+PyYAML
 termcolor
 tifffile
 lxml
 imagecodecs
 colordict
-colorama
 
 # coco ----------------------------------------
 pycocotools>=2.0
 
 # Geo ----------------------------------------
-# if windows then using pipwin install
-# pip install pipwin
-pandas
-shapely
-
 # need to next command
 # apt install libgdal-dev
 # export CPLUS_INCLUDE_PATH=/usr/include/gdal
 # export C_INCLUDE_PATH=/usr/include/gdal
-
 gdal
-fiona
-pyproj
-six
 geopandas
+pygeos
+
+
+# deeplab -------------------------------------
+tensorflow-gpu
+imageio
+openpyxl
+scipy

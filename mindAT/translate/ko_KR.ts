@@ -327,24 +327,9 @@
         <translation>이동</translation>
     </message>
     <message>
-        <location filename="../app.py" line="378"/>
-        <source>Edit Annotations</source>
-        <translation>주석 편집</translation>
-    </message>
-    <message>
         <location filename="../app.py" line="382"/>
-        <source>Move and edit the selected annotations</source>
-        <translation>선택한 주석 이동 및 편집</translation>
-    </message>
-    <message>
-        <location filename="../app.py" line="387"/>
-        <source>Delete Annotations</source>
-        <translation>주석 삭제</translation>
-    </message>
-    <message>
-        <location filename="../app.py" line="391"/>
-        <source>Delete the selected annotations</source>
-        <translation>선택한 주석 삭제</translation>
+        <source>Move the selected annotations</source>
+        <translation>선택한 주석 이동</translation>
     </message>
     <message>
         <location filename="../app.py" line="395"/>
@@ -355,6 +340,16 @@
         <location filename="../app.py" line="399"/>
         <source>Create a duplicate of the selected annotations</source>
         <translation>선택한 주석 복제 생성</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="387"/>
+        <source>Delete Annotations</source>
+        <translation>주석 삭제</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="391"/>
+        <source>Delete the selected annotations</source>
+        <translation>선택한 주석 삭제</translation>
     </message>
     <message>
         <location filename="../app.py" line="357"/>

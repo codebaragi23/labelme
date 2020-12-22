@@ -17,6 +17,7 @@ from .convert import shape_to_mask
 from .convert import annotations_to_label
 from .convert import annotation_to_dict
 from .convert import dict_to_annotation
+from .convert import pixelmap_to_annotation
 
 from .qt import addTitle
 from .qt import newIcon

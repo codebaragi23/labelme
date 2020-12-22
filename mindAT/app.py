@@ -49,12 +49,22 @@ from mindAT.widgets import LabelQListWidget
 from mindAT.widgets import ZoomWidget
 from mindAT.widgets import QJsonTreeWidget
 
+import tensorflow as tf
+from mindAT.deepLab import deeplab_model
+from mindAT.deepLab.utils import preprocessing, dataset_util
+from mindAT.deepLab.api_header import MAP_TASK
+from mindAT.deepLab.config import *
+# 클래스 초기화
+task = MAP_TASK()
+
 LABEL_COLORMAP = imgviz.label_colormap(value=None)
 class MainWindow(QtWidgets.QMainWindow):
 
   FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
   RESTART_CODE = 0x1234
   RESET_CONFIG = 0x4321
+
+  labels = None
 
   def __init__(
     self,
@@ -76,25 +86,29 @@ class MainWindow(QtWidgets.QMainWindow):
     # save default config to ~/.mindATrc
     if config is None:
       config = get_config()
-    self._config = config
+    self.config = config
     self.resetConfig = False
     self.support_languages = support_languages
 
     # set default annotation colors
-    Annotation.line_color = QtGui.QColor(*self._config["annotation"]["line_color"])
-    Annotation.fill_color = QtGui.QColor(*self._config["annotation"]["fill_color"])
+    Annotation.line_color = QtGui.QColor(*self.config["annotation"]["line_color"])
+    Annotation.fill_color = QtGui.QColor(*self.config["annotation"]["fill_color"])
     Annotation.select_line_color = QtGui.QColor(
-      *self._config["annotation"]["select_line_color"]
+      *self.config["annotation"]["select_line_color"]
     )
     Annotation.select_fill_color = QtGui.QColor(
-      *self._config["annotation"]["select_fill_color"]
+      *self.config["annotation"]["select_fill_color"]
     )
     Annotation.vertex_fill_color = QtGui.QColor(
-      *self._config["annotation"]["vertex_fill_color"]
+      *self.config["annotation"]["vertex_fill_color"]
     )
     Annotation.hvertex_fill_color = QtGui.QColor(
-      *self._config["annotation"]["hvertex_fill_color"]
+      *self.config["annotation"]["hvertex_fill_color"]
     )
+
+    # set default label indicators
+    LabelFile.label_indi = self.config["geo"]["label"]
+    LabelFile.shape_type_indi = self.config["geo"]["shape_type"]
 
     super(MainWindow, self).__init__()
     self.setWindowTitle(__appname__)
@@ -109,12 +123,12 @@ class MainWindow(QtWidgets.QMainWindow):
     # Main widgets and related state.
     self.labelDialog = LabelDialog(
       parent=self,
-      labels=self._config["labels"],
-      sort_labels=self._config["sort_labels"],
-      show_text_field=self._config["show_label_text_field"],
-      completion=self._config["label_completion"],
-      fit_to_content=self._config["fit_to_content"],
-      flags=self._config["label_flags"],
+      labels=self.config["labels"],
+      sort_labels=self.config["sort_labels"],
+      show_text_field=self.config["show_label_text_field"],
+      completion=self.config["label_completion"],
+      fit_to_content=self.config["fit_to_content"],
+      flags=self.config["label_flags"],
     )
 
     self.lastOpenDir = None
@@ -164,8 +178,8 @@ class MainWindow(QtWidgets.QMainWindow):
         "Press 'Esc' to deselect."
       )
     )
-    if self._config["labels"]:
-      for label in self._config["labels"]:
+    if self.config["labels"]:
+      for label in self.config["labels"]:
         item = self.labelList.createItemFromLabel(label)
         self.labelList.addItem(item)
         rgb = self._get_rgb_by_label(label)
@@ -205,8 +219,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.setAcceptDrops(True)
 
     self.canvas = self.annotList.canvas = Canvas(
-      epsilon=self._config["epsilon"],
-      double_click=self._config["canvas"]["double_click"],
+      epsilon=self.config["epsilon"],
+      double_click=self.config["canvas"]["double_click"],
     )
     self.canvas.zoomRequest.connect(self.zoomRequest)
 
@@ -231,14 +245,14 @@ class MainWindow(QtWidgets.QMainWindow):
     features = QtWidgets.QDockWidget.DockWidgetFeatures()
     #for dock in ["file_dock", "flag_dock", "label_dock", "annotator_dock"]:
     for dock in ["file_dock", "label_dock", "annotator_dock"]:
-      if self._config[dock]["closable"]:
+      if self.config[dock]["closable"]:
         features = features | QtWidgets.QDockWidget.DockWidgetClosable
-      if self._config[dock]["floatable"]:
+      if self.config[dock]["floatable"]:
         features = features | QtWidgets.QDockWidget.DockWidgetFloatable
-      if self._config[dock]["movable"]:
+      if self.config[dock]["movable"]:
         features = features | QtWidgets.QDockWidget.DockWidgetMovable
       getattr(self, dock).setFeatures(features)
-      if self._config[dock]["show"] is False:
+      if self.config[dock]["show"] is False:
         getattr(self, dock).setVisible(False)
 
     self.setTabPosition(Qt.RightDockWidgetArea, QtWidgets.QTabWidget.North)
@@ -251,7 +265,7 @@ class MainWindow(QtWidgets.QMainWindow):
     
     # Actions
     action = functools.partial(utils.newAction, self)
-    shortcuts = self._config["shortcuts"]
+    shortcuts = self.config["shortcuts"]
     quit = action(
       self.tr("&Quit"),
       self.close,
@@ -323,14 +337,14 @@ class MainWindow(QtWidgets.QMainWindow):
       checkable=True,
       enabled=True,
     )
-    saveAuto.setChecked(self._config["auto_save"])
+    saveAuto.setChecked(self.config["auto_save"])
 
     saveWithImageData = action(
       text=self.tr("Save With Image Data"),
       slot=self.enableSaveImageWithData,
       tip=self.tr("Save image data in label file"),
       checkable=True,
-      checked=self._config["store_data"],
+      checked=self.config["store_data"],
     )
 
     changeOutputDir = action(
@@ -370,7 +384,7 @@ class MainWindow(QtWidgets.QMainWindow):
       tip=self.tr('Toggle "keep pevious annotation" mode'),
       checkable=True,
     )
-    toggle_keep_prev_mode.setChecked(self._config["keep_prev"])
+    toggle_keep_prev_mode.setChecked(self.config["keep_prev"])
 
     createPolyMode = action(
       text=self.tr("Create Polygons"),
@@ -631,7 +645,7 @@ class MainWindow(QtWidgets.QMainWindow):
       slot=self.onEnableOpenNextImageAfterEval,
       tip=self.tr("Open next image after evaluation"),
       checkable=True,
-      checked=self._config["auto_open_next_eval"],
+      checked=self.config["auto_open_next_eval"],
     )
 
     evalPass = action(
@@ -942,7 +956,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.statusBar().showMessage(self.tr("%s started.") % __appname__)
     self.statusBar().show()
 
-    if output_file is not None and self._config["auto_save"]:
+    if output_file is not None and self.config["auto_save"]:
       logger.warn(
         "If `auto_save` argument is True, `output_file` argument "
         "is ignored and output filename is automatically "
@@ -1058,9 +1072,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
     self.populateModeActions()
 
-    # self.firstStart = True
-    # if self.firstStart:
-    #  QWhatsThis.enterWhatsThisMode()
+    # load ckpt, session for inference DeepLab V3+ segmentation
+    # load predictions
+    self.DeepLabPlaceHolder = tf.placeholder(tf.float32, [1, PATCH_SIZE, PATCH_SIZE, DEPTH])
+    self.DeepLabPredictions = deeplab_model.deeplabv3_plus_model_fn(
+      self.DeepLabPlaceHolder,
+      None,
+      tf.estimator.ModeKeys.PREDICT,
+      params={
+        'output_stride': output_stride,
+        'batch_size': 1,  # Batch size must be 1 because the images' size may differ
+        'base_architecture': base_architecture,
+        'pre_trained_model': None,
+        'batch_norm_decay': None,
+        'num_classes': NUM_CLASSES,
+        'freeze_batch_norm': True,
+        'num_channels': DEPTH
+      }
+    ).predictions
+
+    #load ckpt
+    saver = tf.train.Saver()
+    ckpt = tf.train.get_checkpoint_state(WEIGHT_PATH)
+
+    # load session
+    self.deepLabSession = tf.Session()
+    saver.restore(self.deepLabSession, ckpt.model_checkpoint_path)
 
   def menu(self, title, actions=None):
     menu = self.menuBar().addMenu(title)
@@ -1080,7 +1117,7 @@ class MainWindow(QtWidgets.QMainWindow):
     utils.addActions(self.menus.edit, self.actions.annotCheckableOperations + self.actions.editMenu)
 
   def setDirty(self):
-    if self._config["auto_save"] or self.actions.saveAuto.isChecked():
+    if self.config["auto_save"] or self.actions.saveAuto.isChecked():
       label_file = self.getLabelFile(self.imagePath)
       if self.output_dir:
         label_file_without_path = osp.basename(label_file)
@@ -1135,7 +1172,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self.statusBar().showMessage(message, delay)
 
   def resetState(self):
-    self.labelList.clear()
+    if not self.config["labels"]:
+      self.labelList.clear()
     self.annotList.clear()
     self.filename = None
     self.imagePath = None
@@ -1203,12 +1241,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
   def validateLabel(self, label):
     # no validation
-    if self._config["validate_label"] is None:
+    if self.config["validate_label"] is None:
       return True
 
     for i in range(self.labelList.count()):
       label_i = self.labelList.item(i).data(Qt.UserRole)
-      if self._config["validate_label"] in ["exact"]:
+      if self.config["validate_label"] in ["exact"]:
         if label_i == label:
           return True
     return False
@@ -1235,7 +1273,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.errorMessage(
         self.tr("Invalid label"),
         self.tr("Invalid label '{}' with validation type '{}'").format(
-          text, self._config["validate_label"]
+          text, self.config["validate_label"]
         ),
       )
       return
@@ -1328,19 +1366,19 @@ class MainWindow(QtWidgets.QMainWindow):
     annotation.setColor(rgb)
 
   def _get_rgb_by_label(self, label):
-    if self._config["annotation_color"] == "auto":
+    if self.config["annotation_color"] == "auto":
       item = self.labelList.findItemsByLabel(label)[0]
       label_id = self.labelList.indexFromItem(item).row() + 1
-      label_id += self._config["shift_auto_annotation_color"]
+      label_id += self.config["shift_auto_annotation_color"]
       return LABEL_COLORMAP[label_id % len(LABEL_COLORMAP)]
     elif (
-      self._config["annotation_color"] == "manual"
-      and self._config["label_colors"]
-      and label in self._config["label_colors"]
+      self.config["annotation_color"] == "manual"
+      and self.config["label_colors"]
+      and label in self.config["label_colors"]
     ):
-      return self._config["label_colors"][label]
-    elif self._config["default_annotation_color"]:
-      return self._config["default_annotation_color"]
+      return self.config["label_colors"][label]
+    elif self.config["default_annotation_color"]:
+      return self.config["default_annotation_color"]
 
   def remLabels(self, annotations):
     for annotation in annotations:
@@ -1356,7 +1394,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.canvas.loadAnnotations(annotations, replace=replace)
   
   def loadLabels(self, dict_annotations, avoidNested=True):
-    annotations = [utils.dict_to_annotation(annotation, self._config["label_flags"]) for annotation in dict_annotations]
+    annotations = [utils.dict_to_annotation(annotation, self.config["label_flags"]) for annotation in dict_annotations]
     if avoidNested:
       length = len(annotations)
       for sidx in range(length):
@@ -1492,7 +1530,7 @@ class MainWindow(QtWidgets.QMainWindow):
       text = items[0].data(Qt.UserRole)
     flags = {}
     group_id = None
-    if self._config["display_label_popup"] or not text:
+    if self.config["display_label_popup"] or not text:
       previous_text = self.labelDialog.edit.text()
       text, flags, group_id = self.labelDialog.popUp(text)
       if not text:
@@ -1502,7 +1540,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.errorMessage(
         self.tr("Invalid label"),
         self.tr("Invalid label '{}' with validation type '{}'").format(
-          text, self._config["validate_label"]
+          text, self.config["validate_label"]
         ),
       )
       text = ""
@@ -1607,7 +1645,7 @@ class MainWindow(QtWidgets.QMainWindow):
     try:
       g = gdal.Open(imagename)
       geo_transfrom =  g.GetGeoTransform()
-      labelFile = LabelFile(label_file, geo_transfrom, self._config["geo"])
+      labelFile = LabelFile(label_file, geo_transfrom)
       imagePath = imagename
     except LabelFileError as e:
       self.errorMessage(
@@ -1627,7 +1665,7 @@ class MainWindow(QtWidgets.QMainWindow):
       )
   
     if labelFile.imageData is None:
-      labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+      labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
       imagePath = imagename
     
     return labelFile, imagePath
@@ -1661,7 +1699,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.fileListWidget.repaint()
       return
 
-    if self._config["keep_prev"]:
+    if self.config["keep_prev"]:
       prev_annotations = self.canvas.annotations
 
     self.resetState()
@@ -1684,7 +1722,7 @@ class MainWindow(QtWidgets.QMainWindow):
     
     if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
       self.labelFile, self.imagePath = self.load_labelfile(filename)
-      self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
+      self.labelFile.imageData = LabelFile.load_image_file(filename, self.config["tiff_real_bitdepth"])
       self.labelFile.filename = label_file
       self.labelFile.imagePath = filename
       self.imagePath = filename
@@ -1704,7 +1742,7 @@ class MainWindow(QtWidgets.QMainWindow):
     #   self.imagePath = filename
     #   geolabel = True
     else:
-      self.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
+      self.imageData = LabelFile.load_image_file(filename, self.config["tiff_real_bitdepth"])
       self.imagePath = filename
 
     if self.labelFile:
@@ -1751,7 +1789,7 @@ class MainWindow(QtWidgets.QMainWindow):
       #   self.label_dock.raise_()
 
     #self.loadFlags(flags)
-    if self._config["keep_prev"] and self.noAnnotations():
+    if self.config["keep_prev"] and self.noAnnotations():
       self.loadAnnotations(prev_annotations, replace=False)
       self.setDirty()
     else:
@@ -1774,7 +1812,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if self.filename in self.zoom_values:
       self.zoomMode = self.zoom_values[self.filename][0]
       self.setZoom(self.zoom_values[self.filename][1])
-    elif is_initial_load or not self._config["keep_prev_scale"]:
+    elif is_initial_load or not self.config["keep_prev_scale"]:
       self.adjustScale(initial=True)
     # set scroll values
     for orientation in self.scroll_values:
@@ -1847,7 +1885,7 @@ class MainWindow(QtWidgets.QMainWindow):
     return w / self.canvas.pixmap.width()
 
   def enableSaveImageWithData(self, enabled):
-    self._config["store_data"] = enabled
+    self.config["store_data"] = enabled
 
   def closeEvent(self, event):
     if not self.mayContinue():      event.ignore()
@@ -1866,6 +1904,7 @@ class MainWindow(QtWidgets.QMainWindow):
       self.settings.setValue("recentFiles", self.recentFiles)
     # ask the use for where to save the labels
     # self.settings.setValue('window/geometry', self.saveGeometry())
+      self.deepLabSession.close()
 
   def dragEnterEvent(self, event):
     extensions = [
@@ -1892,9 +1931,9 @@ class MainWindow(QtWidgets.QMainWindow):
       self.loadFile(filename)
 
   def openPrevImg(self, _value=False):
-    keep_prev = self._config["keep_prev"]
+    keep_prev = self.config["keep_prev"]
     if Qt.KeyboardModifiers() == (Qt.ControlModifier | Qt.ShiftModifier):
-      self._config["keep_prev"] = True
+      self.config["keep_prev"] = True
 
     if not self.mayContinue():
       return
@@ -1911,12 +1950,12 @@ class MainWindow(QtWidgets.QMainWindow):
       if filename:
         self.loadFile(filename)
 
-    self._config["keep_prev"] = keep_prev
+    self.config["keep_prev"] = keep_prev
 
   def openNextImg(self, _value=False, load=True):
-    keep_prev = self._config["keep_prev"]
+    keep_prev = self.config["keep_prev"]
     if Qt.KeyboardModifiers() == (Qt.ControlModifier | Qt.ShiftModifier):
-      self._config["keep_prev"] = True
+      self.config["keep_prev"] = True
 
     if not self.mayContinue():
       return
@@ -1940,7 +1979,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if self.filename and load:
       self.loadFile(self.filename)
 
-    self._config["keep_prev"] = keep_prev
+    self.config["keep_prev"] = keep_prev
 
   def openFile(self, _value=False):
     if not self.mayContinue():
@@ -2187,7 +2226,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+        labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
 
       img = utils.img_data_to_arr(labelFile.imageData)
       cls, ins = utils.annotations_to_label(
@@ -2215,7 +2254,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+        labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
 
       img = utils.img_data_to_arr(labelFile.imageData)
       imgviz.io.imsave(out_img_file, img)
@@ -2305,7 +2344,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+        labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
 
       img = utils.img_data_to_arr(labelFile.imageData)
       imgviz.io.imsave(out_img_file, img)
@@ -2458,7 +2497,7 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = self.getLabelFile(imagename)
       labelFile = LabelFile(label_file)
       if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self._config["tiff_real_bitdepth"])
+        labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
 
       img = utils.img_data_to_arr(labelFile.imageData)
       imgviz.io.imsave(out_img_file, img)
@@ -2556,17 +2595,46 @@ class MainWindow(QtWidgets.QMainWindow):
       self.canvas.groundtruth = []
       self.canvas.repaint()
       return
-    
-    if len(self.imageList) > 0:
-      label_file = osp.join(self.lastOpenDir, "../GT", self.getLabelFile(osp.basename(self.filename)))
-    else:
-      label_file = osp.join(osp.dirname(self.filename), "../GT", self.getLabelFile(osp.basename(self.filename)))
 
-    if not osp.exists(label_file):
-      return
+    input
+    test_image = utils.img_data_to_arr(self.imageData)
+
+    #inference
+    output = task.inference_mindAT(self.deepLabSession, self.DeepLabPredictions, self.DeepLabPlaceHolder, test_image, self.filename + "_gt.jpg")
+    output = np.argmax(output, axis=-1)
+    output = np.uint8(output)
+
+    output = Image.fromarray(output) 
+    output.putpalette([
+      100, 100, 100,
+      10, 10, 10,
+      20, 20, 20,
+      30, 30, 30,
+      40, 40, 40,
+      50, 50, 50,
+      60, 60, 60,
+      70, 70, 70,
+      80, 80, 80,
+      90, 90, 90
+    ])
+
+    gt = output.convert("RGB")
+    #gt.save("gt.jpg")
+    gt = utils.img_pil_to_data(gt)
+
     
-    labelFile = LabelFile(label_file)
-    self.canvas.groundtruth = [utils.dict_to_annotation(annotation, self._config["label_flags"]) for annotation in labelFile.annotations]
+    # if len(self.imageList) > 0:
+    #   gt_file = osp.join(self.lastOpenDir, "../GT", osp.splitext(osp.basename(self.filename))[0]+".png")
+    # else:
+    #   gt_file = osp.join(osp.dirname(self.filename), "../GT", osp.splitext(osp.basename(self.filename))[0]+".png")
+
+    # if not osp.exists(gt_file) or self.config["labels"] == None:
+    #   return
+    
+    # gt = LabelFile.load_image_file(gt_file);
+
+    gt = utils.img_data_to_arr(gt)
+    self.canvas.groundtruth = utils.pixelmap_to_annotation(gt, self.config["labels"])
     for gt in self.canvas.groundtruth:
       if not self.labelList.findItemsByLabel(gt.label):
         label_item = self.labelList.createItemFromLabel(gt.label)
@@ -2581,7 +2649,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self.canvas.repaint()
 
   def onEnableOpenNextImageAfterEval(self, enabled):
-    self._config["auto_open_next_eval"] = enabled
+    self.config["auto_open_next_eval"] = enabled
 
   def onEvalJudgement(self, pass_):
     if not self.workerFile: return
@@ -2653,7 +2721,7 @@ class MainWindow(QtWidgets.QMainWindow):
     return osp.dirname(str(self.filename)) if self.filename else "."
 
   def toggleKeepPrevMode(self):
-    self._config["keep_prev"] = not self._config["keep_prev"]
+    self.config["keep_prev"] = not self.config["keep_prev"]
 
   def onDeleteSelectedAnnotation(self):
     yes, no = QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No

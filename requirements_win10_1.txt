@@ -1,12 +1,10 @@
 # pip install -r requirements.txt
 
 # base ----------------------------------------
-setuptools
-wheel
 imgviz>=0.11.0
 opencv-python
 matplotlib
-numpy
+numpy==1.19.3
 Pillow>=2.8.0
 affine
 PyQt5
@@ -22,3 +20,9 @@ colorama
 
 # coco ----------------------------------------
 pycocotools>=2.0
+
+# deeplab -------------------------------------
+tensorflow-gpu==1.14.0
+imageio==2.9.0
+openpyxl==3.0.5
+scipy==1.5.4
