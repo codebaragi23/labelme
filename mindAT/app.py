@@ -1898,6 +1898,8 @@ class MainWindow(QtWidgets.QMainWindow):
     self._config["store_data"] = enabled
 
   def closeEvent(self, event):
+    self.deepLabSession.close()
+    tf.reset_default_graph()
     if not self.mayContinue():      event.ignore()
 
     if self.resetConfig:
@@ -1914,7 +1916,6 @@ class MainWindow(QtWidgets.QMainWindow):
       self.settings.setValue("recentFiles", self.recentFiles)
     # ask the use for where to save the labels
     # self.settings.setValue('window/geometry', self.saveGeometry())
-    self.deepLabSession.close()
 
   def dragEnterEvent(self, event):
     extensions = [
