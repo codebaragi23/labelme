@@ -22,14 +22,66 @@ theme:
     
 
 default_annotation_color: [0, 255, 0]
-annotation_color: auto  # null, 'auto', 'manual'
+annotation_color: manual  # null, 'auto', 'manual'
 shift_auto_annotation_color: 0
-label_colors: null
+labels: {
+  "비대상지": {
+    "code": 0,
+    "gray": 100,
+    "color": [100,100,100]
+  },
+  "건물": {
+    "code": 10,
+    "gray": 10,
+    "color": [157,47,34],
+  },
+  "주차장": {
+    "code": 20,
+    "gray": 20,
+    "color": [144,88,175],
+  },
+  "도로": {
+    "code": 30,
+    "gray": 30,
+    "color": [168,53,112],
+  },
+  "가로수": {
+    "code": 40,
+    "gray": 40,
+    "color": [177,200,122],
+  },
+  "논": {
+    "code": 50,
+    "gray": 50,
+    "color": [179,126,82],
+  },
+  "밭": {
+    "code": 60,
+    "gray": 60,
+    "color": [199,182,152]
+  },
+  "산림": {
+    "code": 70,
+    "gray": 70,
+    "color": [30,99,34]
+  },
+  "나지": {
+    "code": 80,
+    "gray": 80,
+    "color": [42,105,140]
+  },
+}
+
 
 tiff_real_bitdepth: 11
 
 # geo-json configuration
 geo:
+  default_others: {
+    "type": "FeatureCollection",
+    "name": "Zone-A-001",
+    "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32652" } },
+  }
   label: "cropsid"
   id: null
   shape_type: "type"
@@ -43,73 +95,6 @@ annotation:
   select_line_color: [255, 255, 255, 255]
   select_fill_color: [0, 255, 0, 155]
   hvertex_fill_color: [255, 255, 255, 255]
-
-labels: {
-  "c1": {
-    "id": [
-      100,
-      100,
-      100,
-    ]
-  },
-  "c2": {
-    "id": [
-      10,
-      10,
-      10,
-    ]
-  },
-  "c3": {
-    "id": [
-      20,
-      20,
-      20,
-    ]
-  },
-  "c4": {
-    "id": [
-      30,
-      30,
-      30
-    ]
-  },
-  "c5": {
-    "id": [
-      40,
-      40,
-      40,
-    ]
-  },
-  "c6": {
-    "id": [
-      50,
-      50,
-      50,
-    ]
-  },
-  "c7": {
-    "id": [
-      60,
-      60,
-      60,
-    ]
-  },
-  "c8": {
-    "id": [
-      70,
-      70,
-      70
-    ]
-  },
-  "c9": {
-    "id": [
-      80,
-      80,
-      80
-    ]
-  },
-}
-
 
 # main
 file_dock:

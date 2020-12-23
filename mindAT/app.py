@@ -10,6 +10,7 @@ import webbrowser
 import numpy as np
 
 import geopandas, gdal
+import affine
 import collections
 import datetime
 import uuid
@@ -970,7 +971,6 @@ class MainWindow(QtWidgets.QMainWindow):
     self.imagePath = None
     self.recentFiles = []
     self.maxRecent = 7
-    self.otherData = None
     self.zoom_level = 100
     self.fit_window = False
     self.zoom_values = {}  # key=filename, value=(zoom_mode, zoom_value)
@@ -1180,7 +1180,6 @@ class MainWindow(QtWidgets.QMainWindow):
     self.imageData = None
     self.labelFile = None
     self.workerFile = None
-    self.otherData = None
     self.canvas.resetState()
     self.annotatorInfosWidget.clear()
 
@@ -1373,10 +1372,10 @@ class MainWindow(QtWidgets.QMainWindow):
       return LABEL_COLORMAP[label_id % len(LABEL_COLORMAP)]
     elif (
       self.config["annotation_color"] == "manual"
-      and self.config["label_colors"]
-      and label in self.config["label_colors"]
+      and self.config["labels"]
+      and label in self.config["labels"]
     ):
-      return self.config["label_colors"][label]
+      return self.config["labels"][label]["color"]
     elif self.config["default_annotation_color"]:
       return self.config["default_annotation_color"]
 
@@ -1417,8 +1416,15 @@ class MainWindow(QtWidgets.QMainWindow):
   #     self.flag_widget.addItem(item)
 
   def saveLabels(self, filename):
-    #lf = LabelFile()
-
+    if self.labelFile:
+      otherData = self.labelFile.otherData
+      transform = self.labelFile.transform
+    else:
+      otherData = self.config["geo"]["default_others"]
+      imagename = self.imagePath
+      transform = affine.Affine.from_gdal(*gdal.Open(imagename).GetGeoTransform())
+      
+    lf = LabelFile()
     annotations = [utils.annotation_to_dict(item.annotation()) for item in self.annotList]
     #flags = {}
     # for i in range(self.flag_widget.count()):
@@ -1427,21 +1433,18 @@ class MainWindow(QtWidgets.QMainWindow):
     #   flag = item.checkState() == Qt.Checked
     #   flags[key] = flag
     try:
-      imagePath = osp.relpath(self.imagePath, osp.dirname(filename))
       #imageData = self.imageData if self.actions.saveWithImageData.isChecked() else None
       if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
         os.makedirs(osp.dirname(filename))
-      self.labelFile.save(
+      lf.save(
         filename=filename,
         annotations=annotations,
-        imagePath=imagePath,
-        imageData=None,
-        imageHeight=self.image.height(),
-        imageWidth=self.image.width(),
-        otherData=self.otherData,
+        otherData = otherData,
+        transform=transform,
         #flags=flags,
       )
-      #self.labelFile = lf
+      
+      self.labelFile = lf
       items = self.fileListWidget.findItems(
         self.imagePath, Qt.MatchExactly
       )
@@ -1643,10 +1646,8 @@ class MainWindow(QtWidgets.QMainWindow):
     label_file = self.getLabelFile(imagename)
 
     try:
-      g = gdal.Open(imagename)
-      geo_transfrom =  g.GetGeoTransform()
-      labelFile = LabelFile(label_file, geo_transfrom)
-      imagePath = imagename
+      transform = affine.Affine.from_gdal(*gdal.Open(imagename).GetGeoTransform())
+      labelFile = LabelFile(label_file, transform)
     except LabelFileError as e:
       self.errorMessage(
         self.tr("Error opening file"),
@@ -1659,35 +1660,14 @@ class MainWindow(QtWidgets.QMainWindow):
       self.status(self.tr("Error reading %s") % label_file)
       return False
     
-    if labelFile.imagePath:
-      imagePath = osp.join(
-        osp.dirname(label_file), labelFile.imagePath,
-      )
-  
-    if labelFile.imageData is None:
-      labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
-      imagePath = imagename
-    
-    return labelFile, imagePath
+    return labelFile
 
   def getAllAnnotations(self, imageList):
     annotations = []
     for imagename in imageList:
       label_file = self.getLabelFile(imagename)
-      labelFile = None
-      try:
-        labelFile = LabelFile(label_file)
-      except LabelFileError as e:
-        self.errorMessage(
-          self.tr("Error opening file"),
-          self.tr(
-            "<p><b>%s</b></p>"
-            "<p>Make sure <i>%s</i> is a valid label file."
-          )
-          % (e, label_file),
-        )
-        self.status(self.tr("Error reading %s") % label_file)
-        return False
+      labelFile = self.load_labelfile(imagename)
+      if labelFile == False: return False
       annotations.extend(labelFile.annotations)
     return annotations
 
@@ -1721,33 +1701,13 @@ class MainWindow(QtWidgets.QMainWindow):
       label_file = osp.join(self.output_dir, label_file_without_path)
     
     if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
-      self.labelFile, self.imagePath = self.load_labelfile(filename)
-      self.labelFile.imageData = LabelFile.load_image_file(filename, self.config["tiff_real_bitdepth"])
-      self.labelFile.filename = label_file
-      self.labelFile.imagePath = filename
+      self.labelFile = self.load_labelfile(filename)
       self.imagePath = filename
-    # elif all(QtCore.QFile.exists(osp.splitext(filename)[0] + geo_file_ext) for geo_file_ext in [".dbf", ".shp", ".shx"]):
-    #   dbf_file = geopandas.read_file(osp.splitext(filename)[0] + ".shp", encoding='cp949')
-    #   geo = dbf_file._to_geo(na="null", show_bbox=False)
-
-    #   #TODEBUG
-    #   dbf_file.to_file(label_file.replace(".geojson", ".geojson"), driver='GeoJSON')
-      
-    #   g = gdal.Open(filename)
-    #   geo_transfrom =  g.GetGeoTransform()
-    #   self.labelFile = LabelFileFromGeo(geo, geo_transfrom, self._config["geo"])
-    #   self.labelFile.imageData = LabelFile.load_image_file(filename, self._config["tiff_real_bitdepth"])
-    #   self.labelFile.filename = label_file
-    #   self.labelFile.imagePath = filename
-    #   self.imagePath = filename
-    #   geolabel = True
-    else:
-      self.imageData = LabelFile.load_image_file(filename, self.config["tiff_real_bitdepth"])
-      self.imagePath = filename
+    
+    self.imageData = LabelFile.load_image_file(filename, self.config["tiff_real_bitdepth"])
+    self.imagePath = filename
 
     if self.labelFile:
-      self.imageData = self.labelFile.imageData
-      self.otherData = self.labelFile.otherData
       imageList = [self.imagePath]
       if len(self.imageList) > 0:      imageList = self.imageList
       annotations = self.labelFile.annotations
@@ -1902,9 +1862,9 @@ class MainWindow(QtWidgets.QMainWindow):
       self.settings.setValue("window/position", self.pos())
       self.settings.setValue("window/state", self.saveState())
       self.settings.setValue("recentFiles", self.recentFiles)
-    # ask the use for where to save the labels
-    # self.settings.setValue('window/geometry', self.saveGeometry())
-      self.deepLabSession.close()
+      
+    self.deepLabSession.close()
+    tf.reset_default_graph()
 
   def dragEnterEvent(self, event):
     extensions = [
@@ -2223,12 +2183,10 @@ class MainWindow(QtWidgets.QMainWindow):
       base = osp.splitext(osp.basename(imagename))[0]
       out_img_file = osp.join(self.output_dir, "PixelMap", base + ".png")
 
-      label_file = self.getLabelFile(imagename)
-      labelFile = LabelFile(label_file)
-      if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
+      labelFile = self.load_labelfile(imagename)
+      imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
 
-      img = utils.img_data_to_arr(labelFile.imageData)
+      img = utils.img_data_to_arr(imageData)
       cls, ins = utils.annotations_to_label(
         img_shape=img.shape,
         annotations=labelFile.annotations,
@@ -2251,12 +2209,10 @@ class MainWindow(QtWidgets.QMainWindow):
       out_xml_file = osp.join(self.output_dir, "VOC", "Annotations", base + ".xml")
       out_viz_file = osp.join(self.output_dir, "VOC", "AnnotationsVisualization", base + ".jpg")
 
-      label_file = self.getLabelFile(imagename)
-      labelFile = LabelFile(label_file)
-      if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
+      labelFile = self.load_labelfile(imagename)
+      imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
 
-      img = utils.img_data_to_arr(labelFile.imageData)
+      img = utils.img_data_to_arr(imageData)
       imgviz.io.imsave(out_img_file, img)
 
       maker = lxml.builder.ElementMaker()
@@ -2341,12 +2297,9 @@ class MainWindow(QtWidgets.QMainWindow):
       out_insp_file = osp.join(self.output_dir, "VOC", "SegmentationObjectPNG", base + ".png")
       out_insv_file = osp.join(self.output_dir, "VOC", "SegmentationObjectVisualization", base + ".jpg")
 
-      label_file = self.getLabelFile(imagename)
-      labelFile = LabelFile(label_file)
-      if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
-
-      img = utils.img_data_to_arr(labelFile.imageData)
+      labelFile = self.load_labelfile(imagename)
+      imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
+      img = utils.img_data_to_arr(imageData)
       imgviz.io.imsave(out_img_file, img)
 
       cls, ins = utils.annotations_to_label(
@@ -2494,12 +2447,9 @@ class MainWindow(QtWidgets.QMainWindow):
       out_img_file = osp.join(self.output_dir, "COCO", "JPEGImages", base + ".jpg")
       out_viz_file = osp.join(self.output_dir, "COCO", "Visualization", base + ".jpg")
 
-      label_file = self.getLabelFile(imagename)
-      labelFile = LabelFile(label_file)
-      if labelFile.imageData is None:
-        labelFile.imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
-
-      img = utils.img_data_to_arr(labelFile.imageData)
+      labelFile = self.load_labelfile(imagename)
+      imageData = LabelFile.load_image_file(imagename, self.config["tiff_real_bitdepth"])
+      img = utils.img_data_to_arr(imageData)
       imgviz.io.imsave(out_img_file, img)
 
       data["images"].append(
@@ -2596,16 +2546,16 @@ class MainWindow(QtWidgets.QMainWindow):
       self.canvas.repaint()
       return
 
-    input
-    test_image = utils.img_data_to_arr(self.imageData)
+    input = utils.img_data_to_arr(self.imageData)
 
     #inference
-    output = task.inference_mindAT(self.deepLabSession, self.DeepLabPredictions, self.DeepLabPlaceHolder, test_image, self.filename + "_gt.jpg")
+    output = task.inference_mindAT(self.deepLabSession, self.DeepLabPredictions, self.DeepLabPlaceHolder, input)
     output = np.argmax(output, axis=-1)
     output = np.uint8(output)
 
-    output = Image.fromarray(output) 
-    output.putpalette([
+    gt = Image.fromarray(output) 
+
+    gt.putpalette([
       100, 100, 100,
       10, 10, 10,
       20, 20, 20,
@@ -2615,25 +2565,40 @@ class MainWindow(QtWidgets.QMainWindow):
       60, 60, 60,
       70, 70, 70,
       80, 80, 80,
-      90, 90, 90
     ])
+    gt.save("gt_gray.png")
+    gt = gt.convert("L")
+    gt = np.array(gt)
 
-    gt = output.convert("RGB")
-    #gt.save("gt.jpg")
-    gt = utils.img_pil_to_data(gt)
-
+    # gt.putpalette([
+    #   100, 100, 100,
+    #   157,47,34,
+    #   144,88,175,
+    #   168,53,112,
+    #   177,200,122,
+    #   179,126,82,
+    #   199,182,152,
+    #   30,99,34,
+    #   42,105,140,
+    # ])
+    # gt.save("gt_color.png")
+    #gt = gt.convert("RGB")
     
     # if len(self.imageList) > 0:
-    #   gt_file = osp.join(self.lastOpenDir, "../GT", osp.splitext(osp.basename(self.filename))[0]+".png")
+    #   gt_file = osp.join(self.lastOpenDir, "gt", osp.splitext(osp.basename(self.filename))[0]+"_FGT.tif")
     # else:
-    #   gt_file = osp.join(osp.dirname(self.filename), "../GT", osp.splitext(osp.basename(self.filename))[0]+".png")
+    #   gt_file = osp.join(osp.dirname(self.filename), "gt", osp.splitext(osp.basename(self.filename))[0]+"_FGT.tif")
 
     # if not osp.exists(gt_file) or self.config["labels"] == None:
     #   return
     
     # gt = LabelFile.load_image_file(gt_file);
+    # gt = utils.img_data_to_arr(gt)
+    # gt = np.array(gt)
 
-    gt = utils.img_data_to_arr(gt)
+    # self.canvas.groundtruth = utils.pixelmap_to_annotation(gt, self.config["labels"])
+    # self.loadAnnotations(self.canvas.groundtruth)
+
     self.canvas.groundtruth = utils.pixelmap_to_annotation(gt, self.config["labels"])
     for gt in self.canvas.groundtruth:
       if not self.labelList.findItemsByLabel(gt.label):

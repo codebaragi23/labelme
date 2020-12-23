@@ -13,11 +13,11 @@ fi
 
 . ./venv/bin/activate
 
-if [ -z "$invalide_venv" ]; then
-  echo "------------------->>Install python packages"
-  pip install -r requirements_ubuntu18.04.txt
-  pip install pyinstaller
-fi
+#if [ -z $invalide_venv ]; then
+echo "------------------->>Install python packages"
+pip install -r requirements_ubuntu18.04.txt
+pip install pyinstaller
+#fi
 
 if [-f "./build"]; then
   rm -rf "./build"
@@ -29,5 +29,3 @@ fi
 
 echo "------------------->>Build spec"
 pyinstaller mindAT_ubutnu18.04.spec
-
-. ./venv/bin/deactivate

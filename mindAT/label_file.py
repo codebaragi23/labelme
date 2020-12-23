@@ -44,10 +44,8 @@ class LabelFile(object):
   label_indi = "label"
   shape_type_indi = "shape_type"
 
-  def __init__(self, filename=None, geo_transfrom=None, config=None):
+  def __init__(self, filename=None, geo_transfrom=None):
     self.annotations = []
-    self.imagePath = None
-    self.imageData = None
     if filename is not None and geo_transfrom is not None:
       self.load(filename, geo_transfrom)
     self.filename = filename
@@ -75,7 +73,7 @@ class LabelFile(object):
             diff_bitdepth = real_bitdepth-8
             image = (image/(1<<diff_bitdepth)).clip(0, 255)
             image = image.astype("uint8")
-            #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             
           image_pil = Image.fromarray(image)
       else:
@@ -118,7 +116,7 @@ class LabelFile(object):
       with open(filename, "r") as f:
         data = json.load(f)
 
-      self.transform = affine.Affine.from_gdal(*geo_transfrom)
+      self.transform = geo_transfrom
       transform = ~self.transform
       annotations = []
       for feature in data["features"]:
@@ -171,25 +169,25 @@ class LabelFile(object):
     del data["features"]
 
     self.flags = {}
-    self.imagePath = None
-    self.imageData = None
     self.filename = None
     self.annotations = annotations
     self.otherData = data;
 
   def save(
     self,
-    filename,
     annotations,
-    imagePath,
-    imageHeight,
-    imageWidth,
-    imageData=None,
+    filename=None,
     otherData=None,
+    transform=None,
     flags=None,
   ):
-    data = self.otherData
-    transform = self.transform
+    if otherData is None:
+      otherData = self.otherData
+      assert otherData is not None
+
+    if transform is None:
+      transform = self.transform
+      assert transform is not None
 
     features = []
     for annot in annotations:
@@ -206,11 +204,11 @@ class LabelFile(object):
       )
       features.append(feature)
 
-    data["features"] = features
+    otherData["features"] = features
 
     try:
       with open(filename, "w") as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(otherData, f, ensure_ascii=False, indent=0)
       self.filename = filename
     except Exception as e:
       raise LabelFileError(e)

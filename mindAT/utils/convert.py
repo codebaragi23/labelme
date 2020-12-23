@@ -153,11 +153,8 @@ def pixelmap_to_annotation(pixmap, labels, epsilon=0.1):
   annotations = []
 
   for label in labels: 
-    id = labels[label]['id']
-    if type(id) == list:
-      id = cv2.cvtColor(np.array(id).astype(np.uint8).reshape(1,1,3), cv2.COLOR_RGB2GRAY)[0, 0]
-    
-    labeled = images[:,:,id]
+    gray = labels[label]['gray']
+    labeled = images[:,:,gray]
     labeled[labeled>0] = 255
     contours, hierarchy = cv2.findContours(labeled, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 

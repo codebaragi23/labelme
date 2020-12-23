@@ -256,7 +256,7 @@ def calc_result_excel(result_path, test_label_path, each_file_result=True):
 
 	return accuracy
 
-def inference_mindAT(sess, predictions, placeholder, image_ori, file_name, gpu_id=None):
+def inference_mindAT(sess, predictions, placeholder, image_ori, gpu_id=None):
 	'''
 
 	:param weight_path: path of weight
