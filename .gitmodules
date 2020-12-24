@@ -1,0 +1,3 @@
+[submodule "mindAT/deepLab/weight"]
+	path = mindAT/deepLab/weight
+	url = https://github.com/codebaragi23/deeplab-weight
