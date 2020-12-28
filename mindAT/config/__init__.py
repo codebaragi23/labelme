@@ -23,7 +23,7 @@ def update_dict(target_dict, new_dict, validate_item=None):
 # -----------------------------------------------------------------------------
 def get_default_config(reset_from_default_config=False):
     config_file = osp.join(here, "default_config.yaml")
-    with open(config_file) as f:
+    with open(config_file, encoding='UTF-8') as f:
         config = yaml.safe_load(f)
 
     # save default config to ~/.mindATrc
