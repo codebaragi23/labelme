@@ -12,7 +12,7 @@ __appname__ = "MindAT"
 # 1. MAJOR version when you make incompatible API changes;
 # 2. MINOR version when you add functionality in a backwards-compatible manner;
 # 3. PATCH version when you make backwards-compatible bug fixes.
-__version__ = "5.0.0"
+__version__ = "5.1.0"
 
 QT4 = QT_VERSION[0] == "4"
 QT5 = QT_VERSION[0] == "5"
@@ -23,11 +23,4 @@ PY3 = sys.version[0] == "3"
 del sys
 
 from mindAT.label_file import LabelFile
-from mindAT import testing
 from mindAT import utils
-from mindAT import eval
-import numpy as np
-
-a = np.zeros((5,5), dtype='uint8')
-b = np.zeros((5,5), dtype='uint8')
-eval.pixel_accuracy(a, b)

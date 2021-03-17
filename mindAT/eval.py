@@ -130,7 +130,8 @@ def extract_both_masks(eval_segm, gt_segm, cl, n_cl):
 
 def extract_classes(segm):
     cl = list(np.unique(segm))
-    cl.remove(0)
+    if 0 in cl:
+      cl.remove(0)
     n_cl = len(cl)
 
     return cl, n_cl

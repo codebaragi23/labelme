@@ -14,8 +14,6 @@ import numpy as np
 
 # TODO(unknown):
 # - [maybe] Find optimal epsilon value.
-
-
 DEFAULT_TEXT_COLOR = QtGui.QColor(0, 0, 0)
 DEFAULT_TEXT_BACKGROUND_COLOR = QtGui.QColor(128, 128, 128, 156)
 
@@ -95,12 +93,6 @@ class Canvas(QtWidgets.QWidget):
     # Set widget options.
     self.setMouseTracking(True)
     self.setFocusPolicy(QtCore.Qt.WheelFocus)
-
-  def fillDrawing(self):
-    return self._fill_drawing
-
-  def setFillDrawing(self, value):
-    self._fill_drawing = value
 
   def setEvalMethod(self, method):
     self.eval_method = method
@@ -219,7 +211,7 @@ class Canvas(QtWidgets.QWidget):
         # Project the point to the pixmap's edges.
         pos = self.intersectionPoint(self.current[-1], pos)
       elif (
-        len(self.current) > 1
+        len(self.current) > 2
         and self.createMode == "polygon"
         and self.closeEnough(pos, self.current[0])
       ):
@@ -309,8 +301,18 @@ class Canvas(QtWidgets.QWidget):
         self.overrideCursor(CURSOR_GRAB)
         self.update()
         break
+      elif index_edge is not None:
+        if self.selectedVertex():
+          self.hAnnotation.highlightClear()
+        self.prevhVertex = self.hVertex
+        self.hVertex = None
+        self.prevhAnnotation = self.hAnnotation = annotation
+        self.prevhEdge = self.hEdge = index_edge
+        break
+
     else:  # Nothing found, clear highlights, reset state.
       self.unHighlight()
+
     self.edgeSelected.emit(self.hEdge is not None, self.hAnnotation)
     self.vertexSelected.emit(self.hVertex is not None)
 
@@ -461,9 +463,8 @@ class Canvas(QtWidgets.QWidget):
     if (
       self.double_click == "close"
       and self.canCloseAnnotation()
-      and len(self.current) > 3
     ):
-      self.current.popPoint()
+      #self.current.popPoint()
       self.finalise()
 
   def selectAnnotations(self, annotations):
@@ -657,8 +658,7 @@ class Canvas(QtWidgets.QWidget):
         s.paint(p)
 
     if (
-      self.fillDrawing()
-      and self.createMode == "polygon"
+      self.createMode == "polygon"
       and self.current is not None
       and len(self.current.points) >= 2
     ):

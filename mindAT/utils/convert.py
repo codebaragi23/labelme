@@ -1,6 +1,7 @@
 import math
 import uuid
 import re
+import cv2
 
 import numpy as np
 import PIL.Image
@@ -96,15 +97,13 @@ def masks_to_bboxes(masks):
 
 
 def annotation_to_dict(annotation):
-  data = annotation.other_data.copy()
-  data.update(
-    dict(
-      label=annotation.label.encode("utf-8") if PY2 else annotation.label,
-      shape_type=annotation.shape_type,
-      points=[(p.x(), p.y()) for p in annotation.points],
-      group_id=annotation.group_id,
-      flags=annotation.flags,
-    )
+  data = dict(
+    label=annotation.label.encode("utf-8") if PY2 else annotation.label,
+    shape_type=annotation.shape_type,
+    points=[(p.x(), p.y()) for p in annotation.points],
+    group_id=annotation.group_id,
+    flags=annotation.flags,
+    other_data=annotation.other_data,
   )
   return data
 
@@ -131,3 +130,43 @@ def dict_to_annotation(annotation, default_flags=None):
   annotation.other_data = other_data
 
   return annotation
+
+
+def to_categorical(y, num_classes=None):
+  y = np.array(y, dtype='uint8').ravel()
+  if not num_classes:
+    #num_classes = np.max(y) + 1
+    num_classes = 256
+  n = y.shape[0]
+  categorical = np.zeros((n, num_classes), dtype='uint8')
+  categorical[np.arange(n), y] = 1
+  return categorical
+
+def pixelmap_to_annotation(pixmap, labels, epsilon=0.1):
+  if pixmap.shape[-1] == 3:
+    pixmap = cv2.cvtColor(pixmap, cv2.COLOR_BGR2GRAY)
+
+  shape = (pixmap.shape[0],pixmap.shape[1],1)
+  pixmap = pixmap.reshape(shape)
+  images = to_categorical(pixmap).reshape((pixmap.shape[0],pixmap.shape[1],-1))
+
+  annotations = []
+
+  for label in labels: 
+    gray = labels[label]['gray']
+    labeled = images[:,:,gray]
+    labeled[labeled>0] = 255
+    contours, hierarchy = cv2.findContours(labeled, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for i,c in enumerate(contours) :
+      contours[i] = cv2.approxPolyDP(c,epsilon,True)
+      if contours[i].shape[0] < 3:
+        continue
+    
+      annot = Annotation(label=label, shape_type="polygon")
+      for x, y in contours[i].reshape(contours[i].shape[0],contours[i].shape[2]).tolist():
+        annot.addPoint(QtCore.QPointF(x, y))
+      
+      annotations.append(annot)
+
+  return annotations

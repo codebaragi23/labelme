@@ -8,25 +8,25 @@ keep_prev_brightness: false
 keep_prev_contrast: false
 logger_level: info
 
-flags: null
+flags: ["__ignore__", "A0", "A1"]
 label_flags: null
 labels: null
 file_search: null
 sort_labels: true
 validate_label: null
 
+theme:
+  default: ""
+  "bluesky":
+    "QMainWindow, QToolBar{color:rgb(0,64,128); background-color:rgb(220,238,248); border:1px solid white; selection-color: blue;}"
+    
+
 default_annotation_color: [0, 255, 0]
 annotation_color: auto  # null, 'auto', 'manual'
 shift_auto_annotation_color: 0
 label_colors: null
 
-tiff_real_bitdepth: 8
-
-# geo-json configuration
-geo:
-  prop_ann_name: "cropsid"
-  porp_ann_id: null
-  shape_type: "type"
+tiff_real_bitdepth: 11
 
 annotation:
   # drawing

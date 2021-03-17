@@ -23,27 +23,9 @@ class AppearanceWidget(QtWidgets.QWidget):
     showLayout = QtWidgets.QHBoxLayout()
     PixelmapCkb = QtWidgets.QCheckBox(self.tr("Show pixelmap"))
     PixelmapCkb.stateChanged.connect(lambda:self.onChangeShowPixelmal(PixelmapCkb))
-    GroundTruthCkb = QtWidgets.QCheckBox(self.tr("Show groundtruth"))
-    GroundTruthCkb.setChecked(True)
-    GroundTruthCkb.stateChanged.connect(lambda:self.onChangeShowGT(GroundTruthCkb))
     showLayout.setContentsMargins(0, 0, 0, 0)
     showLayout.setSpacing(0)
     showLayout.addWidget(PixelmapCkb)
-    showLayout.addWidget(GroundTruthCkb)
-
-    splitter = QtWidgets.QFrame()
-    splitter.setFrameShape(QtWidgets.QFrame.HLine)
-
-    evalLabel = QtWidgets.QLabel(self.tr("Evaluation methods"))
-    evalComb = QtWidgets.QComboBox()
-    evalComb.addItems(["Pixel accuracy", "Mean accuracy", "Mean IU", "Frequency Weighted IU"])
-
-    self.evalComb = evalComb
-    evalLayout = QtWidgets.QHBoxLayout()
-    evalLayout.setContentsMargins(0, 0, 0, 0)
-    evalLayout.setSpacing(0)
-    evalLayout.addWidget(evalLabel)
-    evalLayout.addWidget(evalComb)
 
     formLayout = QtWidgets.QFormLayout()
     formLayout.addRow(self.tr("Brightness"), self.slider_brightness)
@@ -51,28 +33,14 @@ class AppearanceWidget(QtWidgets.QWidget):
     formLayout.addRow(resetBtn)
     formLayout.addRow(showLayout)
 
-    formLayout.addRow(splitter)
-    formLayout.addRow(evalLayout)
-
     self.setLayout(formLayout)
     self.callback = callback
-
-    self.evalComponents = (
-      GroundTruthCkb,
-      evalLabel,
-      evalComb,
-    )
     
   def setAnnotations(self, annotations):
     self.annotations = annotations
   
   def setEnabled(self, bool):
     super(AppearanceWidget, self).setEnabled(bool)
-    self.setEnabledEval(False)
-
-  def setEnabledEval(self, bool):
-    for comp in self.evalComponents:
-      comp.setEnabled(bool)
 
   def _create_slider(self):
     slider = QtWidgets.QSlider(Qt.Horizontal)
@@ -106,11 +74,3 @@ class AppearanceWidget(QtWidgets.QWidget):
       with utils.slot_disconnected(self.slider_contrast.valueChanged, self.onSliderValueChanged):
         self.slider_contrast.setValue(self.contrast * 50.0)
       self.callback(brightness=self.brightness, contrast=self.contrast, show_pixelmap=False)
-
-  @Slot("QCheckBox")
-  def onChangeShowGT(self, ckb):
-    if ckb.isChecked():
-      self.callback(show_groundtruth=True)
-    else:
-      self.callback(show_groundtruth=False)
-

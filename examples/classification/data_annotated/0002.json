@@ -1,13 +1,15 @@
 {
-  "version": "5.0.0",
+  "version": "5.1.0",
   "flags": {
+    "A0": false,
+    "A1": false,
     "__ignore__": false,
-    "cat": false,
-    "dog": true
+    "cat": true,
+    "dog": false
   },
   "annotations": [],
   "imagePath": "0002.jpg",
-  "imageData": null,
   "imageHeight": 480,
-  "imageWidth": 640
+  "imageWidth": 640,
+  "imageData": null
 }

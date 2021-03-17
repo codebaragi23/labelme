@@ -17,5 +17,3 @@ from .tool_bar import ToolBar
 from .label_qlist_widget import LabelQListWidget
 
 from .zoom_widget import ZoomWidget
-
-from .json_treeview import QJsonTreeWidget

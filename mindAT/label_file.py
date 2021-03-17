@@ -1,12 +1,13 @@
 import base64
 import contextlib
+from ctypes import c_uint8
 import io
 import json
 import os.path as osp
 
 import cv2
-import PIL.Image
-import tifffile
+from tifffile import TiffFile
+from PIL import Image
 
 from mindAT import __version__
 from mindAT.logger import logger
@@ -14,7 +15,7 @@ from mindAT import PY2
 from mindAT import QT4
 from mindAT import utils
 
-PIL.Image.MAX_IMAGE_PIXELS = None
+Image.MAX_IMAGE_PIXELS = None
 
 
 @contextlib.contextmanager
@@ -32,43 +33,20 @@ def open(name, mode):
 class LabelFileError(Exception):
   pass
 
-def LabelFileFromGeo(geo, geo_transfrom, config=None):
-  labelFile = LabelFile()
-  labelFile.fromGeo(geo, geo_transfrom, config)
-  return labelFile
-
 class LabelFile(object):
   suffix = ".json"
 
   def __init__(self, filename=None):
     self.annotations = []
     self.imagePath = None
-    self.imageData = None
     if filename is not None:
       self.load(filename)
     self.filename = filename
 
   @staticmethod
-  def load_image_file(filename, real_bitdepth=8):
-    ext = osp.splitext(filename)[1].lower()
-
-    import numpy as np
+  def load_image_file(filename):
     try:
-      if ext in [".tif", ".tiff"]:
-        image = tifffile.imread(filename)
-
-        #농업
-        if image.shape[0] == 3:
-          image = image.transpose(1,2,0)
-
-        if real_bitdepth > 8:
-          diff_bitdepth = real_bitdepth-8
-          image = (image/(1<<diff_bitdepth)).clip(0, 255)
-          
-        image = image.astype("uint8")
-        image_pil = PIL.Image.fromarray(image)
-      else:
-        image_pil = PIL.Image.open(filename)
+      image_pil = Image.open(filename)
     except IOError:
       logger.error("Failed opening image file: {}".format(filename))
       return
@@ -77,6 +55,7 @@ class LabelFile(object):
     image_pil = utils.apply_exif_orientation(image_pil)
 
     with io.BytesIO() as f:
+      ext = osp.splitext(filename)[1].lower()
       if PY2 and QT4:
         format = "PNG"
       elif ext in [".jpg", ".jpeg"]:
@@ -87,109 +66,9 @@ class LabelFile(object):
       f.seek(0)
       return f.read()
 
-  def fromGeo(self, data, geo_transfrom, config=None):
-    keys = [
-      "features",  # polygonal annotations
-    ]
-    features_keys = [
-      "type",
-      "properties",
-      "geometry",
-    ]
-    annotation_keys = [
-      "id",
-      "type",
-      "geometry",
-    ]
-
-    # relative path from label file to relative path from cwd
-    # annotations = [
-    #   dict(
-    #     # label=feature["properties"]["작물ID"],
-    #     # shape_type=feature["geometry"]["type"].lower(),
-    #     # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-
-    #     # t1
-    #     # label=str(feature["properties"]["속성"]),
-    #     # shape_type=feature["geometry"]["type"].lower(),
-    #     # points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-
-    #     # t2
-    #     # label=str(feature["properties"]["ann_name"]),
-    #     # shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
-    #     # #points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-    #     # points=[[x, y] for x, y in feature["geometry"]["coordinates"][0]],
-
-    #     # t3
-    #     label=str(feature["properties"]["ann_name"]),
-    #     shape_type="polygon" if feature["geometry"]["type"].lower() == "multipolygon" else feature["geometry"]["type"].lower(),
-    #     points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-        
-    #     flags=feature.get("flags", {}),
-    #     group_id=feature.get("group_id", None),
-    #     other_data={
-    #       k:v for k, v in feature.items() if k not in annotation_keys
-    #     },
-    #   )
-    #   for feature in data["features"]
-    # ]
-
-    annotations = []
-    for feature in data["features"]:
-      if feature["geometry"][config["shape_type"]].lower() == "multipolygon":
-        multilen = len(feature["geometry"]["coordinates"])
-        for i in range(multilen-1):
-          annot = dict(
-            label=str(feature["properties"][config["prop_ann_name"]]),
-            shape_type="polygon",
-            points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][i][0]],
-            
-            flags=feature.get("flags", {}),
-            group_id=feature.get("group_id", None),
-            other_data={
-              k:v for k, v in feature.items() if k not in annotation_keys
-            },
-          )
-          annotations.append(annot)
-
-        annot = dict(
-          label=str(feature["properties"][config["prop_ann_name"]]),
-          shape_type="polygon",
-          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][multilen-1][0]],
-          
-          flags=feature.get("flags", {}),
-          group_id=feature.get("group_id", None),
-          other_data={
-            k:v for k, v in feature.items() if k not in annotation_keys
-          },
-        )
-      else:
-        annot = dict(
-          label=str(feature["properties"][config["prop_ann_name"]]),
-          shape_type=feature["geometry"][config["shape_type"]].lower(),
-          points=[[(geox-geo_transfrom[0])/geo_transfrom[1], (geoy-geo_transfrom[3])/geo_transfrom[5]] for geox, geoy in feature["geometry"]["coordinates"][0]],
-          
-          flags=feature.get("flags", {}),
-          group_id=feature.get("group_id", None),
-          other_data={
-            k:v for k, v in feature.items() if k not in annotation_keys
-          },
-        )
-      annotations.append(annot)
-
-    otherData = {k:v for k, v in data.items() if k not in keys}
-    
-    self.flags = {}
-    self.imagePath = None
-    self.imageData = None
-    self.filename = None
-    self.annotations = annotations
-    self.otherData = otherData
-
   def load(self, filename):
     keys = [
       "version",
-      "imageData",
       "imagePath",
       "annotations",  # polygonal annotations
       "flags",  # image level flags
@@ -223,25 +102,9 @@ class LabelFile(object):
             )
           )
       
-      if data["imageData"] is not None:
-        imageData = base64.b64decode(data["imageData"])
-        if PY2 and QT4:
-          imageData = utils.img_data_to_png_data(imageData)
-      elif data["imagePath"] is not None:
-        # relative path from label file to relative path from cwd
-        imagePath = osp.join(osp.dirname(filename), data["imagePath"])
-        imageData = self.load_image_file(imagePath)
-      else:
-        imageData = None
 
       flags = data.get("flags") or {}
       imagePath = data["imagePath"]
-      if imageData is not None:
-        self._check_image_height_and_width(
-          base64.b64encode(imageData).decode("utf-8"),
-          data.get("imageHeight"),
-          data.get("imageWidth"),
-        )
       annotations = [
         dict(
           label=annot["label"],
@@ -255,7 +118,6 @@ class LabelFile(object):
         )
         for annot in data["annotations"]
       ]
-
       otherData = {}
       for key, value in data.items():
         if key not in keys:
@@ -268,26 +130,8 @@ class LabelFile(object):
     self.flags = flags
     self.annotations = annotations
     self.imagePath = imagePath
-    self.imageData = imageData
     self.filename = filename
     self.otherData = otherData
-
-  @staticmethod
-  def _check_image_height_and_width(imageData, imageHeight, imageWidth):
-    img_arr = utils.img_b64_to_arr(imageData)
-    if imageHeight is not None and img_arr.shape[0] != imageHeight:
-      logger.error(
-        "imageHeight does not match with imageData or imagePath, "
-        "so getting imageHeight from actual image."
-      )
-      imageHeight = img_arr.shape[0]
-    if imageWidth is not None and img_arr.shape[1] != imageWidth:
-      logger.error(
-        "imageWidth does not match with imageData or imagePath, "
-        "so getting imageWidth from actual image."
-      )
-      imageWidth = img_arr.shape[1]
-    return imageHeight, imageWidth
 
   def save(
     self,
@@ -296,15 +140,9 @@ class LabelFile(object):
     imagePath,
     imageHeight,
     imageWidth,
-    imageData=None,
     otherData=None,
     flags=None,
   ):
-    if imageData is not None:
-      imageData = base64.b64encode(imageData).decode("utf-8")
-      imageHeight, imageWidth = self._check_image_height_and_width(
-        imageData, imageHeight, imageWidth
-      )
     if otherData is None:
       otherData = {}
     if flags is None:
@@ -315,7 +153,6 @@ class LabelFile(object):
       flags=flags,
       annotations=annotations,
       imagePath=imagePath,
-      imageData=imageData,
       imageHeight=imageHeight,
       imageWidth=imageWidth,
     )

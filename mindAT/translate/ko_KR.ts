@@ -218,13 +218,13 @@
     </message>
     <message>
         <location filename="../app.py" line="354"/>
-        <source>Reload &amp;Configuration</source>
-        <translation>재구성</translation>
+        <source>&amp;Reset Configuration</source>
+        <translation>환경 복구(&amp;R)</translation>
     </message>
     <message>
         <location filename="../app.py" line="354"/>
-        <source>Reload configuration from configuraton file</source>
-        <translation>환경 설정 파일로부터 재구성</translation>
+        <source>Reset configuration from configuraton file</source>
+        <translation>환경 설정 파일로부터 복구</translation>
     </message>
     <message>
         <location filename="../app.py" line="281"/>
@@ -323,23 +323,13 @@
     </message>
     <message>
         <location filename="../app.py" line="378"/>
-        <source>Edit Annotations</source>
-        <translation>주석 편집</translation>
+        <source>Move</source>
+        <translation>이동</translation>
     </message>
     <message>
         <location filename="../app.py" line="382"/>
-        <source>Move and edit the selected annotations</source>
-        <translation>선택한 주석 이동 및 편집</translation>
-    </message>
-    <message>
-        <location filename="../app.py" line="387"/>
-        <source>Delete Annotations</source>
-        <translation>주석 삭제</translation>
-    </message>
-    <message>
-        <location filename="../app.py" line="391"/>
-        <source>Delete the selected annotations</source>
-        <translation>선택한 주석 삭제</translation>
+        <source>Move the selected annotations</source>
+        <translation>선택한 주석 이동</translation>
     </message>
     <message>
         <location filename="../app.py" line="395"/>
@@ -350,6 +340,16 @@
         <location filename="../app.py" line="399"/>
         <source>Create a duplicate of the selected annotations</source>
         <translation>선택한 주석 복제 생성</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="387"/>
+        <source>Delete Annotations</source>
+        <translation>주석 삭제</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="391"/>
+        <source>Delete the selected annotations</source>
+        <translation>선택한 주석 삭제</translation>
     </message>
     <message>
         <location filename="../app.py" line="357"/>
@@ -780,6 +780,11 @@
         <location filename="../app.py" line="1747"/>
         <source>You are about to restart to change the language, proceed anyway?</source>
         <translation>언어 변경을 위해 다시 시작하려고 합니다. 계속 하시겠습니까?</translation>
+    </message>
+    <message>
+        <location filename="../app.py" line="2135"/>
+        <source>Discard all changes in memory and reload everthing from file, proceed anyway?</source>
+        <translation>모든 설정이 초기화 되며, 파일에서 불러옵니다. 계속 하시겠습니까?</translation>
     </message>
     <message>
         <location filename="../app.py" line="1946"/>

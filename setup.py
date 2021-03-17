@@ -28,7 +28,7 @@ def get_install_requires():
   PY2 = sys.version_info[0] == 2
   assert PY3 or PY2
 
-  with open('requirements.txt', 'r') as f:
+  with open('requirements_ubuntu18.04.txt', 'r') as f:
     list_file = f.readlines()
   install_requires = [line.rstrip('\n') for line in list_file] 
 
