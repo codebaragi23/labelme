@@ -5,31 +5,13 @@ imgviz>=0.11.0
 matplotlib
 numpy
 Pillow>=2.8.0
-affine
 PyQt5
 qtpy
 PyYAML
 termcolor
-tifffile
 lxml
 imagecodecs
 colordict
 
 # coco ----------------------------------------
 pycocotools>=2.0
-
-# Geo ----------------------------------------
-# need to next command
-# apt install libgdal-dev
-# export CPLUS_INCLUDE_PATH=/usr/include/gdal
-# export C_INCLUDE_PATH=/usr/include/gdal
-gdal
-geopandas
-pygeos
-
-
-# deeplab -------------------------------------
-tensorflow-gpu
-imageio
-openpyxl
-scipy

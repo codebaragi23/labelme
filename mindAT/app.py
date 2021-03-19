@@ -5,11 +5,9 @@ import math
 import os
 import os.path as osp
 import shutil
-import re
 import webbrowser
 import numpy as np
 
-import geopandas, gdal
 import collections
 import datetime
 import uuid
@@ -907,7 +905,6 @@ class MainWindow(QtWidgets.QMainWindow):
     self.resize(size)
     self.move(position)
     # or simply:
-    # self.restoreGeometry(settings['window/geometry']
     self.restoreState(
       self.settings.value("window/state", QtCore.QByteArray())
     )
@@ -1254,7 +1251,7 @@ class MainWindow(QtWidgets.QMainWindow):
     self._noSelectionSlot = False
     self.canvas.loadAnnotations(annotations, replace=replace)
   
-  def loadLabels(self, dict_annotations, avoidNested=True):
+  def loadLabels(self, dict_annotations, avoidNested=False):
     annotations = [utils.dict_to_annotation(annotation, self.config["label_flags"]) for annotation in dict_annotations]
     if avoidNested:
       length = len(annotations)
@@ -1281,7 +1278,7 @@ class MainWindow(QtWidgets.QMainWindow):
     if self.labelFile:
       otherData = self.labelFile.otherData
     else:
-      otherData = self.config["geo"]["default_others"]
+      otherData = None
       imagename = self.imagePath
       
     lf = LabelFile()
@@ -1602,11 +1599,11 @@ class MainWindow(QtWidgets.QMainWindow):
     flags = {k: False for k in self.config["flags"] or []}
     if self.labelFile:
       self.loadLabels(self.labelFile.annotations)
-      if len(self.labelFile.flags) > 0:
+      if self.labelList.count() > 0:
+        self.label_dock.raise_()
+      else:
         flags.update(self.labelFile.flags)
         self.flag_dock.raise_()
-      else:
-        self.label_dock.raise_()
 
     self.loadFlags(flags)
     if self.config["keep_prev"] and self.noAnnotations():

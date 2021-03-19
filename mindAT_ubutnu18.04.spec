@@ -9,13 +9,13 @@ sys.setrecursionlimit(5000)  # required on Windows
 
 a = Analysis(
   ['mindAT/__main__.py'],
-  pathex=['mindAT', '/usr/lib/python3.6/dist-packages/cv2/python-3.6', '/usr/share/gdal/2.2/'],
+  pathex=['mindAT', '/usr/lib/python3.6/dist-packages/cv2/python-3.6'],
   binaries=[],
-  datas=collect_data_files('geopandas', subdir='datasets') + [
+  datas=[
     ('mindAT/config/default_config.yaml', 'mindAT/config'),
     ('mindAT/icons/*', 'mindAT/icons'),
     ('mindAT/translate/*.qm','mindAT/translate')],
-  hiddenimports=['affine', 'pyproj._compat', 'fiona._shim', 'fiona.schema'],
+  hiddenimports=['pyproj._compat'],
   hookspath=[],
   runtime_hooks=[],
   excludes=[],

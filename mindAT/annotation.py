@@ -5,8 +5,6 @@ from qtpy import QtCore
 from qtpy import QtGui
 
 import mindAT.utils
-from shapely.geometry import Point, Polygon
-
 
 # TODO(unknown):
 # - [opt] Store paths instead of creating new ones at each paint.
@@ -113,18 +111,6 @@ class Annotation(object):
 
   def isClosed(self):
     return self._closed
-
-  def contain(self, annotation):
-    if self._shape_type == "polygon":
-      polygon = Polygon([[qtPt.x(), qtPt.y()] for qtPt in self.points])
-      nested = True
-      for qtPt in annotation.points:
-        pt = Point([qtPt.x(), qtPt.y()])
-        nested = pt.within(polygon)
-        if nested == False: break
-      return nested
-    else:
-      print("not support")
 
   def setOpen(self):
     self._closed = False

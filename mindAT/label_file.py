@@ -5,8 +5,6 @@ import io
 import json
 import os.path as osp
 
-import cv2
-from tifffile import TiffFile
 from PIL import Image
 
 from mindAT import __version__
@@ -159,13 +157,6 @@ class LabelFile(object):
     for key, value in otherData.items():
       assert key not in data
       data[key] = value
-
-    # if format == 'GeoJSON':
-    #   data = dict(
-    #     type=otherData.get("type", "FeatureCollection"),
-    #     crs=otherData.get("crs", { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32652" } }),
-    #     features= [dict({"type":"Feature", "properties":{"관리번호":None, "작물ID": k["label"], "작업위치":None}, "geometry":{"type":k["shape_type"].capitalize(), "coordinates":[[[x, -y] for x, y in k["points"] ]]}}) for k in annotations]
-    #   )
 
     try:
       with open(filename, "w") as f:
